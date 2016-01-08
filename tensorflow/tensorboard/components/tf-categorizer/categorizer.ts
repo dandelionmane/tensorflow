@@ -75,7 +75,7 @@ module Categorizer {
    * Currently, it is just used for the fallbackCategorizer, but we may want to
    * refactor the general categorization logic to use the concept of extractors.
    */
-  function extractorToCategorizer(extractor: (s: string) => string): Categorizer {
+  export function extractorToCategorizer(extractor: (s: string) => string): Categorizer {
     return (tags: string[]): Category[] => {
       if (tags.length === 0) {
         return [];
