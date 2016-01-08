@@ -4,7 +4,7 @@ var colorScale = function(x) {
 }
 
 
-setTimeout(function() {
+function main() {
   var runNames = ["black", "blue", "orange"];
   var dispatcher = new Dispatcher();
   var runsView = ReactDOM.render(<RunsPane dispatcher={dispatcher}/>, document.querySelector(".runs .panel-list"));
@@ -14,4 +14,6 @@ setTimeout(function() {
     runsStore.addRun("teal");
     runsStore.addRun("magenta");
   }, 1000);
-}, 1500)
+}
+
+window.addEventListener('WebComponentsReady', main);
