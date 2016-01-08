@@ -3,6 +3,7 @@
 <link rel="import" href="../paper-toolbar/paper-toolbar.html">
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-header-panel/paper-header-panel.html">
+<link rel="import" href="../tf-explore-dashboard/tf-explore-dashboard.html">
 <link rel="import" href="../tf-event-dashboard/tf-event-dashboard.html">
 <link rel="import" href="../tf-histogram-dashboard/tf-histogram-dashboard.html">
 <link rel="import" href="../tf-image-dashboard/tf-image-dashboard.html">
@@ -21,6 +22,7 @@ allows the user to toggle between various dashboards.
         <div id="toolbar-content">
           <div class="toolbar-title">TensorBoard</div>
           <paper-tabs selected="0" noink class="tabs" id="tabs">
+            <paper-tab data-mode="explore" on-click="changeMode">explore</paper-tab>
             <paper-tab data-mode="events" on-click="changeMode">Events</paper-tab>
             <paper-tab data-mode="images" on-click="changeMode">Images</paper-tab>
             <paper-tab data-mode="graphs" on-click="changeMode">Graph</paper-tab>
@@ -29,6 +31,11 @@ allows the user to toggle between various dashboards.
         </div>
       </paper-toolbar>
       <div id="content" class="fit">
+        <template is="dom-if" if="[[exploreDashboard(mode)]]">
+          <tf-explore-dashboard
+            id="exploreDash"
+          ></tf-explore-dashboard>
+        </template>
         <template is="dom-if" if="[[eventDashboard(mode)]]">
           <tf-event-dashboard
             id="eventDash"
@@ -119,6 +126,9 @@ allows the user to toggle between various dashboards.
       changeMode: function(ev) {
         var mode = ev.target.parentElement.getAttribute('data-mode');
         this._changeMode(mode, true);
+      },
+      exploreDashboard: function(mode) {
+        return mode === "explore";
       },
       eventDashboard: function(mode) {
         return mode === "events";

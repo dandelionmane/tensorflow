@@ -3,6 +3,7 @@
     "noImplicitAny": false,
     "noEmitOnError": true,
     "compileOnSave": false,
-    "target": "ES5"
+    "target": "ES5",
+    "jsx": "react"
   }
 }
