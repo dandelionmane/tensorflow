@@ -1,0 +1,395 @@
+paper-toolbar,
+#dropShadow,
+tf-explore-dashboard ::-webkit-scrollbar {
+  display: none;
+}
+
+tf-explore-dashboard {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+tf-explore-dashboard .main-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 100%;
+  background: #5A5D65;
+  background: #F90;
+  z-index: 10;
+  box-shadow: 2px 0px 7px rgba(0,0,0,0.2)
+}
+
+tf-explore-dashboard .main-bar .logo {
+  width: 100%;
+  height: 60px;
+  background: url(/lib/images/favicon.png) center center no-repeat;
+  background-size: 22px;
+  text-indent: 200px;
+  overflow: hidden;
+}
+
+/* Navigation */
+
+tf-explore-dashboard .navigation {
+/*   border-top: solid 1px rgba(255,255,255,0.2); */
+  margin: 0 20px;
+  padding: 10px 0;
+}
+
+tf-explore-dashboard .navigation div {
+  font-size: 14px;
+  margin: 0 10px 5px 0;
+  font-weight: 300;
+  color: white;
+  opacity: 0.5;
+  border-radius: 2px;
+  background: url(/lib/images/equalizer.svg) no-repeat 7px center;
+  background-size: 24px 24px;
+  width: 100%;
+  height: 40px;
+  overflow: hidden;
+  text-indent: 80px;
+}
+
+tf-explore-dashboard .navigation div.selected {
+  font-weight: 700;
+  opacity: 1;
+  background-color: rgba(255,255,255,0.2);
+}
+
+tf-explore-dashboard .navigation div.events {
+  background-image: url(/lib/images/scalar.svg);
+}
+
+tf-explore-dashboard .navigation div.graph {
+  background-image: url(/lib/images/device-hub.svg);
+}
+
+tf-explore-dashboard .navigation div.histograms {
+  background-image: url(/lib/images/equalizer.svg);
+}
+
+tf-explore-dashboard .navigation div.images {
+  background-image: url(/lib/images/photo-library.svg);
+}
+
+/* Content */
+
+tf-explore-dashboard .content {
+  position: absolute;
+  left: 81px;
+  right: 0;
+  height: 100%;
+  z-index: 1;
+  background: white;
+}
+
+/* Panels */
+
+tf-explore-dashboard .panel {
+  width: inherit;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 0 30px;
+  border-right: solid 1px rgba(0,0,0,0.07);
+  background: white;
+}
+
+tf-explore-dashboard .panel .panel-header {
+  flex-grow: 0;
+  flex-shrink: 0;
+  height: 60px;
+  padding-top: 10px;
+  border-bottom: solid 1px #ddd;
+  box-sizing: border-box;
+  position: relative;
+}
+
+tf-explore-dashboard .panel .panel-header h3 {
+  font-size: 17px;
+  word-wrap: break-word;
+  width: 100%;
+  font-weight: 300;
+  margin-top: 11px;
+}
+
+tf-explore-dashboard .panel .panel-list {
+  flex-grow: 1;
+  flex-shrink: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+  box-sizing: border-box;
+}
+
+/* Controls */
+
+tf-explore-dashboard .panel-header button {
+  height: 30px;
+  width: 30px;
+  margin: 5px 0 0 2px;
+  background: no-repeat center center;
+  background-size: 20px 20px;
+  border: none;
+  color: white;
+  border-radius: 15px;
+  overflow: hidden;
+  text-indent: 100px;
+  outline: none;
+  opacity: 0.5;
+  float: right;
+}
+
+tf-explore-dashboard .panel-header button:hover {
+  background-color: #ddd;
+}
+
+tf-explore-dashboard .panel-header button.in {
+  background-image: url(/lib/images/add.svg);
+}
+
+tf-explore-dashboard .panel-header button.out {
+  background-image: url(/lib/images/remove.svg);
+}
+
+tf-explore-dashboard .panel-header button.reload {
+  background-image: url(/lib/images/cached.svg);
+}
+
+tf-explore-dashboard .panel-header button.search {
+  background-image: url(/lib/images/search.svg);
+}
+
+tf-explore-dashboard .panel-header button.check-all {
+  background-image: url(/lib/images/done-all.svg);
+}
+
+tf-explore-dashboard .panel-header button.close {
+  background-image: url(/lib/images/close.svg);
+  position: static;
+}
+
+/* Runs */
+
+tf-explore-dashboard .runs.panel {
+  width: 220px;
+  box-shadow: 0 0px 7px rgba(0,0,0,0.1);
+  background: white;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+tf-explore-dashboard .run-link {
+  line-height: 2.2em;
+  font-size: 12px;
+}
+
+tf-explore-dashboard .run-link .swatch {
+  width: 10px;
+  height: 10px;
+  float: left;
+  margin: 7px 8px 0 0;
+  border-radius: 10px;
+}
+
+/* Browse */
+
+tf-explore-dashboard .browse.panel {
+  font-size: 11px;
+  position: absolute;
+  z-index: -10;
+  box-shadow: 0 0px 7px rgba(0,0,0,0.1);
+  width: calc(100% - 220px);
+  left: 220px;
+}
+
+tf-explore-dashboard .browse.panel .panel-list {
+  padding-top: 0;
+}
+
+tf-explore-dashboard .group {
+  position: relative;
+}
+
+tf-explore-dashboard .transitioning .group:last-child {
+  margin-bottom: 1000px;
+}
+
+tf-explore-dashboard .group.fixed {
+  position: static;
+}
+
+tf-explore-dashboard .group.fixed h3 {
+  top: 60px;
+  border-top: solid 1px white;
+  width: calc(100% - 60px);
+/*   box-shadow: 0 2px 2px rgba(0,0,0,0.05); */
+/*   border-bottom: solid 1px #ddd; */
+}
+
+tf-explore-dashboard .group.bottom {
+  position: relative;
+}
+
+tf-explore-dashboard .group.bottom h3 {
+  top: inherit;
+  bottom: -1px;
+  width: 100%;
+}
+
+tf-explore-dashboard .group h3 {
+  margin: 0;
+  padding: 10px 0 10px;
+  background: linear-gradient(rgba(255,255,255,1) 60%, rgba(255,255,255,0.3));
+  background: white;
+  border-top: solid 1px #ddd;
+  font-size: 14px;
+  font-weight: 500;
+  position: absolute;
+  top: 0;
+  z-index: 10000;
+  transition: box-shadow 0.3s;
+}
+
+tf-explore-dashboard .group:first-child h3 {
+  border-top: none;
+}
+
+tf-explore-dashboard .group .charts {
+  position: relative
+}
+
+tf-explore-dashboard .scalar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: white;
+  border-top: solid 1px white;
+}
+
+tf-explore-dashboard .scalar.selected {
+/*   border-top: solid 1px black; */
+}
+
+tf-explore-dashboard h3 {
+  font-size: 14px;
+  word-wrap: break-word;
+  width: 100%
+}
+
+tf-explore-dashboard .scalar canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  background: white;
+}
+
+tf-explore-dashboard .scalar h4 {
+  position: absolute;
+  bottom: 100%;
+  font-weight: 300;
+  margin: 0;
+  font-size: 12px;
+  word-wrap: break-word;
+  color: #333;
+  padding: 2px;
+/*   border-bottom: solid 1px #ddd; */
+}
+
+tf-explore-dashboard .scalar h4 b {
+  font-weight: 400;
+  color: black;
+}
+
+tf-explore-dashboard .scalar .overlay {
+  position: absolute;
+}
+
+tf-explore-dashboard .scalar .scalar-run {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 9px;
+  font-weight: 400;
+  color: #bbb;
+  width: 100%;
+  height: 100%;
+}
+
+tf-explore-dashboard .scalar .scalar-run .dot {
+  width: 5px;
+  height: 5px;
+  position: absolute;
+  transform: translate(-2.5px, -2.5px);
+  border-radius: 4px;
+  border: solid 1px rgba(255, 255, 255, 1);
+  pointer-events: none;
+}
+
+tf-explore-dashboard .scalar .scalar-run .tick {
+  position: absolute;
+  pointer-events: none;
+
+}
+
+tf-explore-dashboard .scalar .scalar-run .line {
+  border-top: solid 1px #ccc;
+  width: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+tf-explore-dashboard .scalar .scalar-run .label {
+  position: absolute;
+  top: -5px;
+  left: 6px;
+}
+
+tf-explore-dashboard .scalar .reticle {
+  border-left: solid 1px rgba(0, 0, 0, 0.2);
+  height: 100%;
+  position: absolute;
+  pointer-events: none;
+}
+
+tf-explore-dashboard .scalar .reticle .label {
+  position: absolute;
+  text-align: center;
+  width: 80px;
+  left: -40px;
+  bottom: -23px;
+  height: 13px;
+  display: none;
+  background: rgba(0,0,0,0.3);
+  color: white;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+/* Table */
+
+tf-explore-dashboard .table.panel {
+  width: 0;
+  left: 0;
+  padding: 0 30px;
+  position: absolute;
+  overflow: hidden;
+  z-index: -20;
+/*   transition: width 0.3s, padding 0.3s; */
+}
+
+tf-explore-dashboard .table.panel.show {
+}
+
+tf-explore-dashboard .table.panel canvas {
+  width: 100%;
+}

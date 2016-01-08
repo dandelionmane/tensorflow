@@ -1,0 +1,45 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="stylesheet" type="text/css" href="explore.css">"
+<dom-module id="tf-explore-dashboard">
+  <template>
+    <div class="main-bar">
+      <div class="logo"></div>
+      <div class="navigation">
+        <div class="selected events">Events</div>
+        <div class="graph">Graph</div>
+        <div class="histograms">Histograms</div>
+        <div class="images">Images</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="panel runs">
+        <div class="panel-header">
+          <h3>Runs</h3>
+        </div>
+        <div class="panel-list"></div>
+      </div>
+      <div class="panel browse">
+        <div class="panel-header">
+          <h3>Events</h3>
+        </div>
+        <div class="panel-list"></div>
+      </div>
+      <div class="panel table">
+        <div class="panel-header">
+          <h3></h3>
+        </div>
+        <div class="panel-list"></div>
+      </div>
+    </div>
+  </template>
+  <script src="../react/react.js"></script>
+  <script src="../react/react-dom.js"></script>
+  <script src="explore.js"></script>
+  <script>
+    Polymer({
+      is: "tf-explore-dashboard",
+      properties: {
+      },
+    });
+  </script>
+</dom-module>

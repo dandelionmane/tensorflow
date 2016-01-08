@@ -57,7 +57,7 @@ var onError = function(err) {
 // file.
 var TF_COMPONENTS_PREFIX = 'tf-';
 var TF_COMPONENTS_TYPESCRIPT_GLOB = 'components/' + TF_COMPONENTS_PREFIX +
-    '*/**/*.ts';
+    '*/**/*.tsx';
 
 gulp.task('compile.all', function() {
   hasError = false;

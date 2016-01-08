@@ -1,0 +1,29 @@
+<link rel="import" href="../../polymer/polymer.html">
+<link rel="import" href="../tf-image-grid.html">
+
+<dom-module id="tf-image-grid-test">
+  <template>
+    <tf-image-grid
+      run-to-images="[[runToImages]]"
+      images-generator="[[imagesGenerator]]"
+      individualImageGenerator="[[individualImageGenerator]]">
+    </tf-image-grid>
+  </template>
+  <script>
+    var runToImages = {
+      run1: ["foo/5", "bar/5", "zod/5", "foo/20", "bar/20", "zod/20"],
+      run2: ["foo/5", "bar/5", "zod/5", "foo/10", "bar/10", "zod/10"],
+      run3: ["foo/5", "bar/5", "zod/5", "foo/10", "bar/10", "zod/10", "foo/20", "bar/20", "zod/20"],
+    };
+
+    var imagesGenerator =
+    Polymer({
+      is: "tf-image-grid-test",
+      properties: {
+        runToImages: {type: Object, value: runToImages},
+        imagesGenerator: {type: Function, value: imagesGenerator},
+        individualImageGenerator: {type: Function, value: individualImageGenerator},
+      },
+    })
+  </script>
+</dom-module>
