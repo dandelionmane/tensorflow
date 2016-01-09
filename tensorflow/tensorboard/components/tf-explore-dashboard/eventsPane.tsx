@@ -18,7 +18,6 @@ interface EventsState {
   dataArray: DataArray;
 }
 
-
 interface CategoryProps {
   name: string;
   tags: string[];
@@ -36,14 +35,13 @@ var CategoryPane = React.createClass<CategoryProps, CategoryState>({
     };
   },
   render: function() {
-    var createTagDisplay = (t: string) => {
-      return <div key={t}>{t}</div>;
-    };
     return (
       <div className="group">
         <h3 key={this.props.name}>{this.props.name}</h3>
         <div className="charts">
-          <h4>{this.props.tags.map(createTagDisplay)}</h4>
+          {this.props.tags.map(function(tag) {
+            return <Tag name={tag} key={tag} />;
+          })}
         </div>
       </div>
     );
