@@ -88,7 +88,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         fill: #aaa;
       }
 
-      .axis .domain {
+      .axis path.domain {
         fill: none;
       }
 
@@ -103,6 +103,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       .axis.slice .tick line {
         stroke-dasharray: 2;
       }
+      .small .axis text { display: none; }
+      .small .axis .tick:first-of-type text { display: block; }
+      .small .axis .tick:last-of-type text { display: block; }
+      .medium .axis text { display: none; }
+      .medium .axis .tick:nth-child(2n + 1) text { display: block; }
+      .large .axis text { display: none; }
+      .large .axis .tick:nth-child(2n + 1) text { display: block; }
+
+
+
     </style>
     <svg id="svg">
       <g>
@@ -129,6 +139,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       height: { type: Number, value: 500 },
       data: { type: Object, value: [] }
     },
+    ready: function() {
+      // Polymer's way of scoping styles on nodes that d3 created
+      // It naively adds classes to all child nodes
+      // each time you call it. second param is mutation observer option,
+      // but reluctant to add that, need to investigate more.
+      this.scopeSubtree(this.$["svg"], true);
+    },
     draw: function(duration) {
 
       //
@@ -143,12 +160,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           outerHeight = this.height;
 
       var sliceHeight,
-          margin = { top: 5, right: 60, bottom: 20, left: 5};
+          margin = {top: 5, right: 60, bottom: 20, left: 24};
 
-      if (outerWidth < 250) {
-        margin.right = 5;
-        margin.bottom = 5;
-      }
       if (mode === "offset") {
         sliceHeight = outerHeight / 2.5;
         margin.top = sliceHeight + 5;
@@ -192,6 +205,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             d3.min(data, function(d) { return d.leftMin; }),
             d3.max(data, function(d) { return d.rightMax; })
           ])
+          .nice()
           .range([0, width]);
 
       var xLineScale = d3.scale.linear()
@@ -207,19 +221,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .interpolate(d3.interpolateHcl);
 
       var xAxis = d3.svg.axis()
-              .scale(xScale)
-              .ticks(width > 100 ? 10 : 2)
-              .orient("bottom"),
-          yAxis = d3.svg.axis()
-              .scale(yScale)
-              // .tickFormat(formatTime)
-              .ticks(width > 100 ? 10 : 2)
-              .orient("right"),
-          ySliceAxis = d3.svg.axis()
-              .scale(ySliceScale)
-              .ticks(width > 100 ? 10 : 2)
-              .tickSize(width + 5)
-              .orient("right");
+          .scale(xScale)
+          .ticks(Math.max(2, width / 20))
+          .orient("bottom");
+      var yAxis = d3.svg.axis()
+          .scale(yScale)
+          // .tickFormat(formatTime)
+          .ticks(Math.max(2, width / 20))
+          .orient("right");
+      var ySliceAxis = d3.svg.axis()
+          .scale(ySliceScale)
+          .ticks(Math.max(2, width / 20))
+          .tickSize(width + 5)
+          .orient("right");
+
 
       var path = d3.svg.area()
           .interpolate("linear")
@@ -233,13 +248,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       var svgNode = this.$.svg;
 
-      var svg = d3.select(svgNode);
+      var svg = d3.select(svgNode)
 
       var svgTransition = svg.transition().duration(duration)
           .attr("width", outerWidth)
           .attr("height", outerHeight);
 
-      var g = svg.select("g");
+      var g = svg.select("g")
+          .classed("small", function() { return (width > 0 && width <= 150); })
+          .classed("medium", function() { return (width > 150 && width <= 300); })
+          .classed("large", function() { return (width > 300); })
 
       var gTransition = svgTransition.select("g")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -367,11 +385,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .attr("transform", "translate(" + width + ", " + (mode === "offset" ? 0 : height) + ")")
           .call(yAxis);
 
-      // Polymer's way of scoping styles on nodes that d3 created
-      // It naively adds classes to all child nodes
-      // each time you call it. second param is mutation observer option,
-      // but reluctant to add that, need to investigate more.
-      this.scopeSubtree(this.$["svg"], false);
+
 
     }
   });

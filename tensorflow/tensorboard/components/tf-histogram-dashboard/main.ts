@@ -46,6 +46,9 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
       console.log("scrolling");
       render();
     }
+
+    // scrollContainer.scrollTop
+
   });
 
   throttle("resize", "throttledResize", window);
@@ -204,8 +207,9 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   function layout() {
     console.time("layout");
     var categoryMargin = {top: 60, bottom: 20};
-    var tagMargin = {top: 35, bottom: 30};
-    var chartMargin = {top: 15, right: 10};
+    var tagMargin = {top: 35, bottom: 30, left: 24};
+    var runMargin = {top: 20};
+    var chartMargin = {top: 15, right: 0};
 
     frameWidth = el.getBoundingClientRect().width - 48;
     frameHeight = frame.getBoundingClientRect().height;
@@ -220,12 +224,13 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
       category.y = cumulativeCategoryHeight;
       var cumulativeTagHeight = 0;
       category.runsByTag.forEach(function(tag) {
+        tag.x = tagMargin.left;
         tag.y = cumulativeTagHeight + categoryMargin.top;
         tag.pageY = category.y + tag.y;
         tag.values.forEach(function(run, ri) {
           run.height = chartHeight + 15;
-          run.x = (ri % numColumns) * (chartWidth + chartMargin.right);
-          run.y = Math.floor(ri / numColumns) * (run.height + chartMargin.top) + tagMargin.top;
+          run.x = (ri % numColumns) * (chartWidth + chartMargin.right) - 24;
+          run.y = Math.floor(ri / numColumns) * (run.height + chartMargin.top) + tagMargin.top + runMargin.top;
           run.pageY = run.y + tag.pageY;
         });
         tag.height = tag.values[tag.values.length - 1].y + tag.values[tag.values.length - 1].height + tagMargin.bottom + tagMargin.top;
@@ -272,7 +277,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     var tagEnter = tag.enter().append("div").attr("class", "tag");
     var tagUpdate = tag
         .style("display", (d) => d.match ? "" : "none")
-        .style("transform", (d) => "translate(0px, " + d.y + "px)" )
+        .style("transform", (d) => "translate(" + d.x + "px, " + d.y + "px)" )
         .style("height", (d) => d.height + "px");
     var tagVisibleUpdate = tagUpdate.filter(function(d) {
       return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match;
@@ -325,7 +330,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     });
 
     visibleCharts = histogramUpdate.filter(function(d) {
-      return d.pageY < scrollContainerBottom && (d.pageY + chartHeight) >= scrollContainerTop;
+      return d.pageY < scrollContainerBottom && (d.pageY + d.height) >= scrollContainerTop;
     });
 
     console.timeEnd("render");

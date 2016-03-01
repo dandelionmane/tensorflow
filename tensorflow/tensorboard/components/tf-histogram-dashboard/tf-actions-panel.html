@@ -44,8 +44,8 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
     .buttons .divider {
       float: left;
       border-left: solid 1px var(--paper-grey-300);
-      margin: 0 18px 0 6px;
-      height: 36px;
+      margin: 4px 24px 0 8px;
+      height: 30px;
     }
     .buttons tf-action-button {
       margin-right: 12px;
@@ -61,17 +61,19 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       color: black;
     }
     input {
-      width: 0px;
-      height: 24px;
-      font-size: 15px;
+      width: 200px;
+      font-size: 14px;
       position: relative;
-      margin: 0;
-      transition: width 0.3s ease-in-out;
-      border: none;
+      margin: 0 0 0 8px;
+      border: solid 1px var(--paper-grey-100);
+      background: var(--paper-grey-100);
       outline: none;
+      padding: 4px;
+      top: -1px;
+      border-radius: 4px;
     }
     input:focus {
-      width: 300px;
+      border-color: var(--paper-grey-400);
     }
     .fabs {
       position: absolute;
@@ -79,7 +81,6 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       right: 24px;
       z-index: 100;
     }
-
     .fabs paper-fab {
       --paper-fab-background: white;
       --paper-fab-keyboard-focus-background: var(--paper-grey-200, #eee);
@@ -87,15 +88,12 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       margin-left: 10px;
       @apply(--shadow-elevation-0dp);
     }
-
     .fabs paper-fab ::content > iron-icon {
       color: black;
     }
-
     paper-tooltip {
       font-size: 12px;
     }
-
     paper-dropdown-menu.custom {
       width: 110px;
       margin-right: 10px;
@@ -103,7 +101,7 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       display: block;
 
       --paper-input-container-input: {
-        font-size: 15px;
+        font-size: 14px;
       }
       --paper-input-container-underline: {
         display: none;
@@ -114,8 +112,13 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
     <div class="buttons">
       <tf-action-button id="search">
         <iron-icon icon="search"></iron-icon>
-        <input type="search" id="searchInput"></input>
+        <input type="search" id="searchInput" placeholder="Filter"></input>
         <paper-tooltip>Filter charts. Regular expression supported.</paper-tooltip>
+      </tf-action-button>
+      <div class="divider"></div>
+      <tf-action-button id="refresh">
+        <iron-icon icon="refresh"></iron-icon>
+        <paper-tooltip>Reload&nbsp;data</paper-tooltip>
       </tf-action-button>
       <div class="divider"></div>
       <tf-action-button id="offset">
@@ -135,11 +138,6 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
         </paper-listbox>
       </paper-dropdown-menu>
       <paper-tooltip for="mode">Change time measure</paper-tooltip>
-      <div class="divider"></div>
-      <tf-action-button id="refresh">
-        <iron-icon icon="refresh"></iron-icon>
-        <paper-tooltip>Reload</paper-tooltip>
-      </tf-action-button>
     </div>
 
     <div class="fabs">
