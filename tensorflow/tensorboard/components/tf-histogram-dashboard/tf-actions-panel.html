@@ -2,6 +2,11 @@
 <link rel="import" href="../paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-fab/paper-fab.html">
+<link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../paper-listbox/paper-listbox.html">
+<link rel="import" href="../paper-tooltip/paper-tooltip.html">
+<link rel="import" href="tf-histogram-icons.html">
 <link rel="import" href="tf-action-button.html">
 
 
@@ -39,24 +44,35 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
     .buttons .divider {
       float: left;
       border-left: solid 1px var(--paper-grey-300);
-      margin: 0 18px 0 12px;
+      margin: 0 18px 0 6px;
       height: 36px;
     }
     .buttons tf-action-button {
       margin-right: 12px;
       float: left;
     }
+    .buttons tf-action-button {
+      color: var(--paper-grey-700);
+    }
+    .buttons tf-action-button.deselected {
+      color: var(--paper-grey-400);
+    }
     .buttons paper-fab ::content > iron-icon {
       color: black;
     }
-
     input {
-      width: 300px;
+      width: 0px;
       height: 24px;
-      font-size: 24px;
+      font-size: 15px;
       position: relative;
+      margin: 0;
+      transition: width 0.3s ease-in-out;
+      border: none;
+      outline: none;
     }
-
+    input:focus {
+      width: 300px;
+    }
     .fabs {
       position: absolute;
       top: 43px;
@@ -75,46 +91,102 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
     .fabs paper-fab ::content > iron-icon {
       color: black;
     }
+
+    paper-tooltip {
+      font-size: 12px;
+    }
+
+    paper-dropdown-menu.custom {
+      width: 110px;
+      margin-right: 10px;
+      float: left;
+      display: block;
+
+      --paper-input-container-input: {
+        font-size: 15px;
+      }
+      --paper-input-container-underline: {
+        display: none;
+      }
+    };
     </style>
 
     <div class="buttons">
       <tf-action-button id="search">
         <iron-icon icon="search"></iron-icon>
         <input type="search" id="searchInput"></input>
+        <paper-tooltip>Filter charts. Regular expression supported.</paper-tooltip>
       </tf-action-button>
       <div class="divider"></div>
-      <tf-action-button id="offset"><iron-icon icon="line-weight"></iron-icon> Offset</tf-action-button>
-      <tf-action-button id="overlay"><iron-icon icon="timeline"></iron-icon> Overlay</tf-action-button>
+      <tf-action-button id="offset">
+        <iron-icon icon="tf-histogram:offset"></iron-icon>
+        <paper-tooltip>Offset charts</paper-tooltip>
+      </tf-action-button>
+      <tf-action-button id="overlay" class="deselected">
+        <iron-icon icon="tf-histogram:overlay"></iron-icon>
+        <paper-tooltip>Overlay charts</paper-tooltip>
+      </tf-action-button>
       <div class="divider"></div>
-      <tf-action-button id="wall"><iron-icon icon="schedule"></iron-icon> Wall</tf-action-button>
-      <tf-action-button id="index"><iron-icon icon="schedule"></iron-icon> Index</tf-action-button>
-      <tf-action-button id="step"><iron-icon icon="schedule"></iron-icon> Steps</tf-action-button>
-
+      <paper-dropdown-menu id="mode" class="custom" no-label-float horizontal-align="left">
+        <paper-listbox class="dropdown-content" selected="1">
+          <paper-item>Index</paper-item>
+          <paper-item>Steps</paper-item>
+          <paper-item>Wall Clock</paper-item>
+        </paper-listbox>
+      </paper-dropdown-menu>
+      <paper-tooltip for="mode">Change time measure</paper-tooltip>
+      <div class="divider"></div>
+      <tf-action-button id="refresh">
+        <iron-icon icon="refresh"></iron-icon>
+        <paper-tooltip>Reload</paper-tooltip>
+      </tf-action-button>
     </div>
 
     <div class="fabs">
-      <paper-fab mini noink raised icon="add" title="Zoom In" id="in"></paper-fab>
-      <paper-fab mini noink icon="remove" title="Zoom Out" id="out"></paper-fab>
+      <paper-fab mini noink raised icon="add" id="in"></paper-fab>
+      <paper-tooltip for="in">Zoom in</paper-tooltip>
+      <paper-fab mini noink icon="remove" id="out"></paper-fab>
+      <paper-tooltip for="out">Zoom&nbsp;out</paper-tooltip>
     </div>
 
   </template>
   <script>
     Polymer({
       is: "tf-actions-panel",
-      properties: {},
+      properties: {
+        mode: {
+          type: String,
+          value: "offset"
+        }
+      },
       listeners: {
         "offset.tap": "onoffset",
         "overlay.tap": "onoverlay",
-        "wall.tap": "onwall",
-        "index.tap": "onindex",
-        "step.tap": "onstep",
         "in.tap": "onin",
         "out.tap": "onout",
+        "refresh.tap": "onrefresh",
+        "search.tap": "onsearchfocus",
         "searchInput.input": "onsearch"
       },
-      ready: function() {},
-      onoffset: function(e) { this.fire("modechange", {value: "offset"}); },
-      onoverlay: function(e) { this.fire("modechange", {value: "overlay"}); },
+      ready: function() {
+      },
+      setMode: function(mode) {
+        this.mode = mode;
+        this.$.offset.classList.add("deselected");
+        this.$.overlay.classList.add("deselected");
+        this.$[mode].classList.remove("deselected");
+        this.fire("modechange", {value: this.mode});
+      },
+      onsearchfocus: function(e) {
+        this.$.searchInput.focus();
+      },
+      onoffset: function(e) {
+        this.setMode(this.mode === "offset" ? "overlay" : "offset");
+      },
+      onoverlay: function(e) {
+        this.setMode(this.mode === "overlay" ? "offset" : "overlay");
+      },
+      onrefresh: function(d) { this.fire("refresh"); },
       onindex: function(e) { this.fire("timechange", {value: "i"}); },
       onwall: function(e) { this.fire("timechange", {value: "wall"}); },
       onstep: function(e) { this.fire("timechange", {value: "step"}); },

@@ -3,41 +3,43 @@ var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data
 
 function makeHistogramDashboard(el: HTMLElement, elScope: any) {
 
-
   var data = [];
+
+  //
+  // Elements
+  //
+  var actionsPanel = elScope.$.actions;
+  var chartsContainer: d3.Selection<HCategory> = d3.select(el);
+  var frame = elScope.$.frame;
+  var scrollContainer = document.querySelector("#mainContainer");
+
+  var chartMode = "offset";
+  var chartTime = "i";
 
   //
   // Chart sizing
   //
-  var chartsContainer: d3.Selection<HCategory> = d3.select(el);
-  var frame = elScope.$.frame;
   var frameWidth;
   var frameHeight;
-  var scrollContainer = document.querySelector("#mainContainer");
-  var numColumns = 2 * 2; //must be power of two
-  var chartAspectRatio = 0.75;
+  var scrollContainerHeight;
+  var scrollContainerTop;
+  var scrollContainerBottom;
+  var bufferTop;
+  var bufferBottom;
   var chartWidth;
   var chartHeight;
 
-  //
-  //
-  //
+  var numColumns = 4;
+  var chartAspectRatio = 0.75;
+  var lastRenderedScrollPosition = 0;
+
   var visibleCharts;
   var almostVisibleCharts;
   var allCharts = [];
 
-  // Scan every so many milliseconds to keep us honest. Could be better.
-  // Should debounce and bind to scroll and resize.
-  // setInterval(scan, 500);
-  // function scan() {
-  //   render();
-  //   console.log("Scanning");
-  // }
-
   //
   // Scroll and Resize events
   //
-  var lastRenderedScrollPosition = 0;
   throttle("scroll", "throttledScroll", scrollContainer);
   scrollContainer.addEventListener("throttledScroll", function() {
     if (Math.abs(lastRenderedScrollPosition - scrollContainer.scrollTop) > frameHeight * 0.5) {
@@ -55,13 +57,12 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
   //
   // Events from actions panel
   //
-  var actionsPanel = elScope.$.actions;
 
   actionsPanel.addEventListener("zoomchange", function(e) {
     var targetY = 0;
     var previousStageHeight = data[data.length - 1].y + data[data.length - 1].height;
     var previousScrollTop = scrollContainer.scrollTop + targetY;
-    numColumns = Math.max(1, (e.detail.value === "in" ? Math.ceil(numColumns - 1) : Math.ceil(numColumns + 1)));
+    numColumns = Math.max(1, (e.detail.value === "in" ? Math.floor(numColumns - 1) : Math.ceil(numColumns + 1)));
     layout();
     var newStageHeight = data[data.length - 1].y + data[data.length - 1].height;
     scrollContainer.scrollTop = previousScrollTop * (newStageHeight / previousStageHeight ) - targetY;
@@ -72,6 +73,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     allCharts.forEach(function(chart) {
       mutateChart(chart, "mode", e.detail.value);
     });
+    chartMode = e.detail.value;
     updateVisibleCharts(1000);
   });
 
@@ -79,6 +81,7 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     allCharts.forEach(function(chart) {
       mutateChart(chart, "time", e.detail.value);
     });
+    chartTime = e.detail.value;
     updateVisibleCharts(1000);
   });
 
@@ -87,6 +90,17 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     filter(e.detail.value);
   });
 
+  actionsPanel.addEventListener("refresh", function(e) {
+    allCharts.forEach(function(chart) {
+      mutateChart(chart, "dataRequested", false);
+    });
+    render();
+  });
+
+
+  //
+  // Chart method wrappers so we can keep track of dirty state.
+  //
   function mutateChart(c, property, value) {
     c[property] = value;
     c.dirty = true;
@@ -155,6 +169,11 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     elScope.scopeSubtree(elScope.$.content, true);
   });
 
+  //
+  // Flags which charts to hide by matching the "tag" to a regexp from the
+  // actions panel.
+  //
+
   function filter(query) {
     var queryExpression = new RegExp(query, "i");
     data.forEach(function(category) {
@@ -173,6 +192,14 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     render();
   }
 
+  //
+  // Calculates the layout of all the charts. Why? Well, because we
+  // can now use css transforms which are much faster (gpu optimized?) than
+  // relying on page flow. This also allows us to position elements without
+  // having all the preceeding siblings already in the DOM, allowing the user to
+  // more efficiently jump scroll around in the list. This is a fairly cheap
+  // operation, typically 1ms.
+  //
 
   function layout() {
     console.time("layout");
@@ -193,14 +220,15 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
       category.y = cumulativeCategoryHeight;
       var cumulativeTagHeight = 0;
       category.runsByTag.forEach(function(tag) {
-        tag.height = (chartHeight + chartMargin.top) * Math.ceil(tag.values.length / numColumns) + tagMargin.bottom + tagMargin.top;
         tag.y = cumulativeTagHeight + categoryMargin.top;
         tag.pageY = category.y + tag.y;
         tag.values.forEach(function(run, ri) {
+          run.height = chartHeight + 15;
           run.x = (ri % numColumns) * (chartWidth + chartMargin.right);
-          run.y = Math.floor(ri / numColumns) * (chartHeight + chartMargin.top) + tagMargin.top;
+          run.y = Math.floor(ri / numColumns) * (run.height + chartMargin.top) + tagMargin.top;
           run.pageY = run.y + tag.pageY;
         });
+        tag.height = tag.values[tag.values.length - 1].y + tag.values[tag.values.length - 1].height + tagMargin.bottom + tagMargin.top;
         cumulativeTagHeight += tag.match ? tag.height : 0;
       });
       category.height = cumulativeTagHeight + categoryMargin.bottom + categoryMargin.top;
@@ -209,64 +237,70 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     console.timeEnd("layout");
   }
 
+  //
+
 
   function render() {
     layout();
     console.time("render");
 
     lastRenderedScrollPosition = scrollContainer.scrollTop;
-    var scrollContainerHeight = scrollContainer.getBoundingClientRect().height;
-    var scrollContainerTop = scrollContainer.scrollTop;
-    var scrollContainerBottom = scrollContainer.scrollTop + scrollContainerHeight;
-    var bufferTop = scrollContainerTop - scrollContainerHeight;
-    var bufferBottom = scrollContainerBottom + scrollContainerHeight;
+    scrollContainerTop = scrollContainer.scrollTop;
+    scrollContainerBottom = scrollContainer.scrollTop + scrollContainerHeight;
+    scrollContainerHeight = scrollContainer.getBoundingClientRect().height;
+    bufferTop = scrollContainerTop - scrollContainerHeight;
+    bufferBottom = scrollContainerBottom + 2 * scrollContainerHeight;
 
-    var category = chartsContainer.selectAll(".category").data(data, (d: any) => d.name),
-        categoryExit = category.exit().remove(),
-        categoryEnter = category.enter().append("div").attr("class", "category"),
-        categoryUpdate = category
-            .style("display", (d) => d.match ? "" : "none")
-            .style("top", (d) => d.y + "px")
-            .style("height", (d) => d.height + "px");
-
-    // Filter to just visible categories.
-    categoryUpdate = categoryUpdate.filter(function(d) {
+    // CATEGORIES
+    var category = chartsContainer.selectAll(".category").data(data, (d: any) => d.name);
+    var categoryExit = category.exit().remove();
+    var categoryEnter = category.enter().append("div").attr("class", "category");
+    var categoryUpdate = category
+        .style("display", (d) => d.match ? "" : "none")
+        .style("top", (d) => d.y + "px")
+        .style("height", (d) => d.height + "px");
+    var categoryVisibleUpdate = categoryUpdate.filter(function(d) {
       return d.y < bufferBottom && (d.y + d.height) >= bufferTop && d.match;
     });
 
     categoryEnter.append("h3")
         .text((d) => d.name);
 
-    var tag = categoryUpdate.selectAll(".tag").data((d: any) => d.runsByTag, (d: any) => d.key),
-        tagExit = tag.exit().remove(),
-        tagEnter = tag.enter().append("div").attr("class", "tag"),
-        tagUpdate = tag
-            .style("display", (d) => d.match ? "" : "none")
-            .style("transform", (d) => "translate(0px, " + d.y + "px)" )
-            .style("height", (d) => d.height + "px");
-
-    // Filter to just visible tags.
-    tagUpdate = tagUpdate.filter(function(d) {
+    // TAGS
+    var tag = categoryVisibleUpdate.selectAll(".tag").data((d: any) => d.runsByTag, (d: any) => d.key);
+    var tagExit = tag.exit().remove();
+    var tagEnter = tag.enter().append("div").attr("class", "tag");
+    var tagUpdate = tag
+        .style("display", (d) => d.match ? "" : "none")
+        .style("transform", (d) => "translate(0px, " + d.y + "px)" )
+        .style("height", (d) => d.height + "px");
+    var tagVisibleUpdate = tagUpdate.filter(function(d) {
       return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match;
     });
 
     tagEnter.append("h4")
         .text((d) => d.key);
 
-    var run = tagUpdate.selectAll(".run").data((d: any) => d.values, (d: any) => d.run),
-        runExit = run.exit().remove(),
-        runEnter = run.enter().append("div").attr("class", "run"),
-        runUpdate = run
-            .style("transform", (d) => "translate(" + d.x + "px ," + d.y + "px)" )
-            .style("width", chartWidth + "px")
-            .style("height", chartHeight + "px");
+    // RUNS
+    var run = tagVisibleUpdate.selectAll(".run").data((d: any) => d.values, (d: any) => d.run);
+    var runExit = run.exit().remove();
+    var runEnter = run.enter().append("div").attr("class", "run");
+    var runUpdate = run
+        .style("transform", (d) => "translate(" + d.x + "px ," + d.y + "px)" )
+        .style("width", chartWidth + "px")
+        .style("height", (d) => d.height + "px");
+    var runVisibleUpdate = runUpdate.filter(function(d) {
+      return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match;
+    });
 
     runEnter.append("h5")
         .text((d: any) => d.run);
 
+    // HISTOGRAMS
     var histogramEnter = runEnter.append("tf-vz-histogram-series")
-            .style("top", "15px"),
-        histogramUpdate = runUpdate.select("tf-vz-histogram-series");
+        .property("time", chartTime)
+        .property("mode", chartMode);
+    var histogramUpdate = runUpdate.select("tf-vz-histogram-series");
 
     histogramEnter.each(function(d) {
       allCharts.push(this);
@@ -278,16 +312,14 @@ function makeHistogramDashboard(el: HTMLElement, elScope: any) {
         backend.histograms(d.run, d.tag).then(function(data) {
           mutateChart(chart, "data", processData(data));
           drawChart(chart);
-          // render();
         });
         chart.dataRequested = true;
       }
-      if (chart.width !== chartWidth || chart.height !== chartHeight - 15) {
+      if (chart.width !== chartWidth || chart.height !== chartHeight) {
         mutateChart(chart, "width", chartWidth);
-        mutateChart(chart, "height", chartHeight - 15);
+        mutateChart(chart, "height", chartHeight);
       }
       if (chart.dirty) {
-        console.log("drawing chart");
         drawChart(chart);
       }
     });
