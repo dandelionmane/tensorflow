@@ -9,6 +9,7 @@
 <script src="../../lib/js/requestManager/requestManager.js"></script>
 <script src="../../lib/js/backend/urlPathHelpers.js"></script>
 <script src="../../lib/js/backend/backend.js"></script>
+<script src="../../lib/js/nanite/nanite.js"></script>
 <script src="../../lib/js/node-radar/nodeRadar.js"></script>
 <script src="main.js"></script>
 
@@ -160,7 +161,7 @@ The #center div contains tf-charts embedded inside tf-collapsable-panes.
       is: "tf-histogram-dashboard",
       properties: {},
       ready: function() {
-        makeHistogramDashboard(this.$.content, this);
+        TF.makeHistogramDashboard(this.$.content, this);
       }
     });
   </script>
