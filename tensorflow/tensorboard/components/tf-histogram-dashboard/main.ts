@@ -20,9 +20,24 @@ module TF {
     tag: string;
   }
 
+  type Categories<T> = Category<T>[];
   interface Category<T> {
-    name: string;
-    items: T[];
+    key: string;
+    values: T[];
+  }
+
+
+
+  function mapCategory<T, X>(f: (t: T) => X) {
+    return function(c: Category<T>): Category<X> {
+      return {key: c.key, values: c.values.map(f)};
+    }
+  }
+
+  function mapCategories<T, X>(f: (t: T) => X) {
+    return function(cs: Categories<T>): Categories<X> {
+      return cs.map(mapCategory(f));
+    }
   }
 
   interface HistogramChart extends RunTag  {
@@ -30,27 +45,7 @@ module TF {
   }
 
 
-  function histogramCategories(x: TF.Backend.RunsResponse): Category<RunTag>[] {
-    var enumerations = <TF.Backend.RunEnumeration[]> _.values(x);
-    var tags: string[][] = enumerations.map((e) => e.histograms);
-    var all_tags: string[] = _.union.apply(null, tags);
-    var categorizer = Categorizer.topLevelNamespaceCategorizer;
-    var categories = categorizer(all_tags);
 
-    var runNames = _.keys(x);
-    function tag2runtag(t: string): RunTag[] {
-      return runNames.filter((r) => {
-        return x[r].histograms.indexOf(t) !== -1;
-      }).map((r) => {return {tag: t, run: r}});
-    }
-
-    return categories.map((c) => {
-      return {
-        name: c.name,
-        items: _.flatten(c.tags.map(tag2runtag))
-      };
-    });
-  };
 
   export function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     function histogramGenerator(joyStore: Nanite.Store<JoyEnum>, xStore: Nanite.Store<XEnum>) {
@@ -70,18 +65,24 @@ module TF {
     var runsResponseStore = new Nanite.Store<TF.Backend.RunsResponse>({});
     backend.runs().then((x) => runsResponseStore.set(x));
 
-    var categoryStore: Nanite.Store<Category<RunTag>[]> = runsResponseStore.map(histogramCategories);
-    var chartCategoryStore: Nanite.Store<Category<HistogramChart>[]>;
-    chartCategoryStore = categoryStore.map((cs: Category<RunTag>[]) => {
-      return cs.map((c: Category<RunTag>) => {
-        var x: Category<HistogramChart>;
-        x = {
-          items: c.items.map(histogramGenerator(joyStore, xStore)),
-          name: c.name,
-        };
-        return x;
-      })
+    var chartGenerator = histogramGenerator(joyStore, xStore);
+    var chartStore: Nanite.Store<HistogramChart[]> = runsResponseStore.map((r) => {
+      var runs = _.keys(r);
+      var out = [];
+      runs.forEach((run) => {
+        var tags = r[run].histograms;
+        tags.forEach((tag) => out.push({run: run, tag: tag}));
+      });
+      return out.map(chartGenerator);
     });
+
+    function categorizeHistograms(hists: HistogramChart[]): Categories<Category<HistogramChart>> {
+      return d3.nest()
+          .key(function(d: HistogramChart) { return d.tag.split("/")[0]}) // should bbe computeCategory
+          .key(function(d: HistogramChart) { return d.tag; })
+          .entries(hists);
+    }
+    var categoryStore: Nanite.Store<Categories<Category<HistogramChart>>> = runTagStore.map(categorizeHistograms);
 
 
     var data = [];
@@ -151,12 +152,14 @@ module TF {
     });
 
     actionsPanel.addEventListener("modechange", function(e) {
-      allCharts.forEach(function(chart) {
-        mutateChart(chart, "mode", e.detail.value);
-      });
       var v = e.detail.value === "overlay" ? JoyEnum.overlay : JoyEnum.offset;
       joyStore.set(v);
-      updateVisibleCharts(1000);
+    });
+    joyStore.out(function(val) {
+      allCharts.forEach(function(chart) {
+        mutateChart(chart, "mode", val);
+      });
+      updateVisibleCharts();
     });
 
     actionsPanel.addEventListener("timechange", function(e) {
@@ -165,7 +168,7 @@ module TF {
       });
       var v = {'step': XEnum.step, 'index': XEnum.index, 'wall_time': XEnum.wall_time, 'relative': XEnum.relative}[e.detail.value];
       xStore.set(v);
-      updateVisibleCharts(1000);
+      updateVisibleCharts();
     });
 
     throttle("searchchange", "throttledSearchchange", actionsPanel);
@@ -179,14 +182,14 @@ module TF {
     }
 
     function drawChart(c, animationDuration?: number) {
-      c.draw(animationDuration)
-      c.dirty = false
+      c.draw(animationDuration);
+      c.dirty = false;
     }
 
-    function updateVisibleCharts(animationDuration) {
+    function updateVisibleCharts() {
       visibleCharts.each(function(d:any) {
         console.log("draw")
-        drawChart(this, animationDuration);
+        drawChart(this, 1000);
       });
     }
 
@@ -195,20 +198,20 @@ module TF {
     // Render skeleton HTML
     //
 
-    backend.runs().then((x) => {
-      data = histogramCategories(x);
-      data.forEach(function(d: any) {
-        console.log(d)
-        d.runsByTag = d3.nest()
-            .key(function(d: any) { return d.tag; })
-            .entries(d.items);
-      });
-      filter("");
-      render();
-
-      // This adds the css scoping necessary for the new elements
-      elScope.scopeSubtree(elScope.$.content, true);
-    });
+    // backend.runs().then((x) => {
+    //   data = histogramCategories(x);
+    //   data.forEach(function(d: any) {
+    //     console.log(d)
+    //     d.runsByTag = d3.nest()
+    //         .key(function(d: any) { return d.tag; })
+    //         .entries(d.items);
+    //   });
+    //   filter("");
+    //   render();
+    //
+    //   // This adds the css scoping necessary for the new elements
+    //   elScope.scopeSubtree(elScope.$.content, true);
+    // });
 
 
     function filter(query) {
@@ -228,7 +231,6 @@ module TF {
       });
       render();
     }
-
 
     function layout() {
       console.time("layout");
@@ -267,12 +269,12 @@ module TF {
      });
      console.timeEnd("layout");
    }
-    //
 
 
     function render() {
       layout();
       console.time("render");
+      console.log(data)
 
       lastRenderedScrollPosition = scrollContainer.scrollTop;
       scrollContainerTop = scrollContainer.scrollTop;
