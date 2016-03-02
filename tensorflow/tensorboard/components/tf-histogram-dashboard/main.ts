@@ -3,6 +3,37 @@ module TF {
   var rm = new TF.Backend.RequestManager();
   var backend = new TF.Backend.Backend("/components/tf-tensorboard/demo/giant_data", rm, true);
 
+  //
+  // Chart sizing
+  //
+  var chartsContainer;
+  var scrollContainer;
+  var frame;
+  var frameWidth;
+  var frameHeight;
+  var numColumns = 4;
+  var chartAspectRatio = 0.75;
+  var chartWidth;
+  var chartHeight;
+
+  //
+  //
+  //
+  var visibleCharts;
+  var almostVisibleCharts;
+  var allCharts = [];
+
+  //
+  // Chart sizing
+  //
+  var scrollContainerHeight;
+  var scrollContainerTop;
+  var scrollContainerBottom;
+  var bufferTop;
+  var bufferBottom;
+
+
+
   enum JoyEnum {
     offset,
     overlay,
@@ -44,9 +75,6 @@ module TF {
     render: Function;
   }
 
-
-
-
   export function makeHistogramDashboard(el: HTMLElement, elScope: any) {
     function histogramGenerator(joyStore: Nanite.Store<JoyEnum>, xStore: Nanite.Store<XEnum>) {
       return function(rt: RunTag) {
@@ -58,6 +86,12 @@ module TF {
         }};
       }
     }
+
+    elScope.scopeSubtree(elScope.$.content, true);
+
+    chartsContainer = d3.select(el);
+    scrollContainer = document.querySelector("#mainContainer");
+    frame = elScope.$.frame;
 
     var joyStore = new Nanite.Store<JoyEnum>();
     var xStore = new Nanite.Store<XEnum>();
@@ -84,40 +118,13 @@ module TF {
     }
     var categoryStore: Nanite.Store<Categories<Category<HistogramChart>>> = chartStore.map(categorizeHistograms);
     categoryStore.out((categories) => {
-      debugger;
+      // debugger;
+      // filter("");
       render(categories);
     });
 
-    var data = [];
 
-    //
-    // Chart sizing
-    //
-    var chartsContainer: d3.Selection<Category<RunTag>> = d3.select(el);
-    var frame = elScope.$.frame;
-    var frameWidth;
-    var frameHeight;
-    var scrollContainer = document.querySelector("#mainContainer");
-    var numColumns = 4;
-    var chartAspectRatio = 0.75;
-    var chartWidth;
-    var chartHeight;
 
-    //
-    //
-    //
-    var visibleCharts;
-    var almostVisibleCharts;
-    var allCharts = [];
-
-    //
-    // Chart sizing
-    //
-    var scrollContainerHeight;
-    var scrollContainerTop;
-    var scrollContainerBottom;
-    var bufferTop;
-    var bufferBottom;
 
 
     //
@@ -143,41 +150,42 @@ module TF {
     //
     var actionsPanel = elScope.$.actions;
 
-    actionsPanel.addEventListener("zoomchange", function(e) {
-      var targetY = 0;
-      var previousStageHeight = data[data.length - 1].y + data[data.length - 1].height;
-      var previousScrollTop = scrollContainer.scrollTop + targetY;
-      numColumns = Math.max(1, (e.detail.value === "in" ? Math.floor(numColumns - 1) : Math.ceil(numColumns + 1)));
-      layout();
-      var newStageHeight = data[data.length - 1].y + data[data.length - 1].height;
-      scrollContainer.scrollTop = previousScrollTop * (newStageHeight / previousStageHeight ) - targetY;
-      render(categoryStore.value());
-    });
+    // actionsPanel.addEventListener("zoomchange", function(e) {
+    //   var targetY = 0;
+    //   var previousStageHeight = data[data.length - 1].y + data[data.length - 1].height;
+    //   var previousScrollTop = scrollContainer.scrollTop + targetY;
+    //   numColumns = Math.max(1, (e.detail.value === "in" ? Math.floor(numColumns - 1) : Math.ceil(numColumns + 1)));
+    //   layout();
+    //   var newStageHeight = data[data.length - 1].y + data[data.length - 1].height;
+    //   scrollContainer.scrollTop = previousScrollTop * (newStageHeight / previousStageHeight ) - targetY;
+    //   render(categoryStore.value());
+    // });
 
-    actionsPanel.addEventListener("modechange", function(e) {
-      var v = e.detail.value === "overlay" ? JoyEnum.overlay : JoyEnum.offset;
-      joyStore.set(v);
-    });
-    joyStore.out(function(val) {
-      allCharts.forEach(function(chart) {
-        mutateChart(chart, "mode", val);
-      });
-      updateVisibleCharts();
-    });
 
-    actionsPanel.addEventListener("timechange", function(e) {
-      allCharts.forEach(function(chart) {
-        mutateChart(chart, "time", e.detail.value);
-      });
-      var v = {'step': XEnum.step, 'index': XEnum.index, 'wall_time': XEnum.wall_time, 'relative': XEnum.relative}[e.detail.value];
-      xStore.set(v);
-      updateVisibleCharts();
-    });
-
-    throttle("searchchange", "throttledSearchchange", actionsPanel);
-    actionsPanel.addEventListener("throttledSearchchange", function(e) {
-      filter(e.detail.value);
-    });
+    // actionsPanel.addEventListener("modechange", function(e) {
+    //   var v = e.detail.value === "overlay" ? JoyEnum.overlay : JoyEnum.offset;
+    //   joyStore.set(v);
+    // });
+    // joyStore.out(function(val) {
+    //   allCharts.forEach(function(chart) {
+    //     mutateChart(chart, "mode", val);
+    //   });
+    //   updateVisibleCharts();
+    // });
+    //
+    // actionsPanel.addEventListener("timechange", function(e) {
+    //   allCharts.forEach(function(chart) {
+    //     mutateChart(chart, "time", e.detail.value);
+    //   });
+    //   var v = {'step': XEnum.step, 'index': XEnum.index, 'wall_time': XEnum.wall_time, 'relative': XEnum.relative}[e.detail.value];
+    //   xStore.set(v);
+    //   updateVisibleCharts();
+    // });
+    //
+    // throttle("searchchange", "throttledSearchchange", actionsPanel);
+    // actionsPanel.addEventListener("throttledSearchchange", function(e) {
+    //   filter(e.detail.value);
+    // });
 
     function mutateChart(c, property, value) {
       c[property] = value;
@@ -213,15 +221,15 @@ module TF {
     //   render();
     //
     //   // This adds the css scoping necessary for the new elements
-    //   elScope.scopeSubtree(elScope.$.content, true);
+    //
     // });
 
 
-    function filter(query) {
+    function filter(query, data) {
       var queryExpression = new RegExp(query, "i");
       data.forEach(function(category) {
         var matchCount = 0;
-        category.runsByTag.forEach(function(tag) {
+        category.values.forEach(function(tag) {
           var match = tag.key.match(queryExpression);
           if (match && match.length > 0) {
             matchCount++;
@@ -235,7 +243,7 @@ module TF {
       render(categoryStore.value());
     }
 
-    function layout() {
+    function layout(data) {
       console.time("layout");
       var categoryMargin = {top: 60, bottom: 20};
       var tagMargin = {top: 35, bottom: 30, left: 24};
@@ -254,7 +262,7 @@ module TF {
       data.forEach(function(category) {
         category.y = cumulativeCategoryHeight;
         var cumulativeTagHeight = 0;
-        category.runsByTag.forEach(function(tag) {
+        category.values.forEach(function(tag) {
           tag.x = tagMargin.left;
           tag.y = cumulativeTagHeight + categoryMargin.top;
           tag.pageY = category.y + tag.y;
@@ -265,19 +273,19 @@ module TF {
             run.pageY = run.y + tag.pageY;
           });
           tag.height = tag.values[tag.values.length - 1].y + tag.values[tag.values.length - 1].height + tagMargin.bottom + tagMargin.top;
-          cumulativeTagHeight += tag.match ? tag.height : 0;
+          cumulativeTagHeight += (tag.match === false ? 0 : tag.height);
         });
         category.height = cumulativeTagHeight + categoryMargin.bottom + categoryMargin.top;
-       cumulativeCategoryHeight += category.match ? category.height : 0;
+       cumulativeCategoryHeight += (category.match === false ? 0 : category.height);
      });
      console.timeEnd("layout");
    }
 
 
     function render(data) {
-      layout();
+      layout(data);
       console.time("render");
-      console.log(data)
+      console.log(data);
 
       lastRenderedScrollPosition = scrollContainer.scrollTop;
       scrollContainerTop = scrollContainer.scrollTop;
@@ -287,28 +295,32 @@ module TF {
       bufferBottom = scrollContainerBottom + 2 * scrollContainerHeight;
 
       // CATEGORIES
-      var category = chartsContainer.selectAll(".category").data(data, (d: any) => d.name);
+      var category = chartsContainer.selectAll(".category").data(data, (d: any) => d.key);
       var categoryExit = category.exit().remove();
       var categoryEnter = category.enter().append("div").attr("class", "category");
       var categoryUpdate = category
-          .style("display", (d) => d.match ? "" : "none")
+          .style("display", (d) => d.match === false ? "none" : "")
           .style("top", (d) => d.y + "px")
           .style("height", (d) => d.height + "px");
       var categoryVisibleUpdate = categoryUpdate.filter(function(d) {
-        return d.y < bufferBottom && (d.y + d.height) >= bufferTop && d.match;
+        return d.y < bufferBottom && (d.y + d.height) >= bufferTop && d.match !== false;
       });
 
+      categoryEnter.append("h3").text((d) => d.key);
+
       // TAGS
-      var tag = categoryVisibleUpdate.selectAll(".tag").data((d: any) => d.runsByTag, (d: any) => d.key);
+      var tag = categoryVisibleUpdate.selectAll(".tag").data((d: any) => d.values, (d: any) => d.key);
       var tagExit = tag.exit().remove();
       var tagEnter = tag.enter().append("div").attr("class", "tag");
       var tagUpdate = tag
-          .style("display", (d) => d.match ? "" : "none")
+          .style("display", (d) => d.match === false ? "none" : "")
           .style("transform", (d) => "translate(" + d.x + "px, " + d.y + "px)" )
           .style("height", (d) => d.height + "px");
       var tagVisibleUpdate = tagUpdate.filter(function(d) {
-        return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match;
+        return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match !== false;
       });
+
+      tagEnter.append("h4").text((d) => d.key);
 
       // RUNS
       var run = tagVisibleUpdate.selectAll(".run").data((d: any) => d.values, (d: any) => d.run);
@@ -319,8 +331,10 @@ module TF {
           .style("width", chartWidth + "px")
           .style("height", (d) => d.height + "px");
       var runVisibleUpdate = runUpdate.filter(function(d) {
-        return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match;
+        return d.pageY < bufferBottom && (d.pageY + d.height) >= bufferTop && d.match !== false;
       });
+
+      runEnter.append("h5").text((d) => d.run);
 
       // HISTOGRAMS
       var histogramEnter = runEnter.append("tf-vz-histogram-series")
@@ -349,7 +363,6 @@ module TF {
       visibleCharts = histogramUpdate.filter(function(d) {
         return d.pageY < scrollContainerBottom && (d.pageY + d.height) >= scrollContainerTop;
       });
-
       console.timeEnd("render");
     }
 
