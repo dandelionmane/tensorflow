@@ -82,8 +82,11 @@ module TF {
           .key(function(d: HistogramChart) { return d.tag; })
           .entries(hists);
     }
-    var categoryStore: Nanite.Store<Categories<Category<HistogramChart>>> = runTagStore.map(categorizeHistograms);
-
+    var categoryStore: Nanite.Store<Categories<Category<HistogramChart>>> = chartStore.map(categorizeHistograms);
+    categoryStore.out((categories) => {
+      debugger;
+      render(categories);
+    });
 
     var data = [];
 
@@ -125,14 +128,14 @@ module TF {
     scrollContainer.addEventListener("throttledScroll", function() {
       if (Math.abs(lastRenderedScrollPosition - scrollContainer.scrollTop) > frameHeight * 0.5) {
         console.log("scrolling");
-        render();
+        render(categoryStore.value());
       }
     });
 
     throttle("resize", "throttledResize", window);
     window.addEventListener("throttledResize", function() {
       console.log("resizing");
-      render();
+      render(categoryStore.value());
     });
 
     //
@@ -148,7 +151,7 @@ module TF {
       layout();
       var newStageHeight = data[data.length - 1].y + data[data.length - 1].height;
       scrollContainer.scrollTop = previousScrollTop * (newStageHeight / previousStageHeight ) - targetY;
-      render();
+      render(categoryStore.value());
     });
 
     actionsPanel.addEventListener("modechange", function(e) {
@@ -229,7 +232,7 @@ module TF {
         });
         category.match = (matchCount > 0);
       });
-      render();
+      render(categoryStore.value());
     }
 
     function layout() {
@@ -271,7 +274,7 @@ module TF {
    }
 
 
-    function render() {
+    function render(data) {
       layout();
       console.time("render");
       console.log(data)
