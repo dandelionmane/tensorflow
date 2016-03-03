@@ -183,14 +183,13 @@ module TF {
     //   updateVisibleCharts();
     // });
     //
-    
+
     throttle("searchchange", "throttledSearchchange", actionsPanel);
     actionsPanel.addEventListener("throttledSearchchange", function(e) {
       filter(e.detail.value, categoryStore.value());
     });
 
     function mutateChart(c, property, value) {
-      console.log(c, property, value)
       c[property] = value;
       c.dirty = true;
     }
@@ -268,7 +267,6 @@ module TF {
     function render(data) {
       layout(data);
       console.time("render");
-      console.log(data);
 
       lastRenderedScrollPosition = scrollContainer.scrollTop;
       scrollContainerTop = scrollContainer.scrollTop;
@@ -390,14 +388,21 @@ module TF {
           return bin;
         });
 
-        // TODO rebin and remove this...
-        dd.histogramData = dd.histogramData.filter(function(d) { return (d.right - d.left) > 0.0035; })
-
-        dd.binExtent = [dd.min, dd.max];
-        dd.countExtent = d3.extent(dd.histogramData, function(d:any) { return d.count; });
-        dd.areaMax = d3.max(dd.histogramData, function(d:any) { return d.area; })
         dd.leftMin = d3.min(dd.histogramData, function(d:any) { return d.left; });
         dd.rightMax = d3.max(dd.histogramData, function(d:any) { return d.right; });
+        var binWidth = (dd.rightMax - dd.leftMin) / 50
+        dd.syntheticBins = d3.range(dd.leftMin, dd.rightMax, binWidth).map(function(left) {
+          var right = left + binWidth;
+          var count = d3.sum(dd.histogramData.filter(function(d) { return d.left >= left && d.right < right; }), function(d:any) { return d.count; })
+          return {
+            x: left,
+            dx: binWidth,
+            y: count
+          };
+        });
+
+        dd.countExtent = d3.extent(dd.syntheticBins, function(d:any) { return d.y; });
+
       });
       return data.filter(function(d) { return d.step; }); //TODO Bad, some step values are undefined
     }

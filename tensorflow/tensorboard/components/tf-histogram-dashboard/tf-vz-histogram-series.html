@@ -173,8 +173,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       var width = outerWidth - margin.left - margin.right,
           height = outerHeight - margin.top - margin.bottom;
 
-      var leftMin = d3.min(data, function(d) { return d.leftMin; }),
-          rightMax = d3.max(data, function(d) { return d.rightMax; });
+      var leftMin = d3.min(data, function(d) { return d.x; }),
+          rightMax = d3.max(data, function(d) { return d.x + d.dx; });
       //
       // Formats
       //
@@ -193,7 +193,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .range([0, (mode === "offset" ? height : 0)]);
 
       var ySliceScale = d3.scale.linear()
-          .domain([0, d3.max(data, function(d) { return d.areaMax; })])
+          .domain([0, d3.max(data, function(d) { return d.countExtent[1]; })])
           .range([sliceHeight, 0]);
 
       var yLineScale = d3.scale.linear()
@@ -238,9 +238,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       var path = d3.svg.area()
           .interpolate("linear")
-          .x(function(d) { return xLineScale(d.center); })
+          .x(function(d) { return xLineScale(d.x); })
           .y0(function(d) { return yLineScale(0); })
-          .y1(function(d) { return yLineScale(d.area); });
+          .y1(function(d) { return yLineScale(d.y); });
 
       //
       // Render
@@ -324,7 +324,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       var outlineEnter = histogramEnter.append("path").attr("class", "outline"),
           outlineUpdate = histogramUpdate.select(".outline")
               .attr("vector-effect", "non-scaling-stroke")
-              .attr("d", function(d) { return path(d.histogramData); })
+              .attr("d", function(d) { return path(d.syntheticBins); })
               .style("stroke-width", 1),
           outlineTransition = histogramTransition.select(".outline")
               .attr("transform", "scale(" + width / outlineCanvasSize + ", " + sliceHeight / outlineCanvasSize + ")")
