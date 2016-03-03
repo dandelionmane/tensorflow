@@ -202,16 +202,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       var xScale = d3.scale.linear()
           .domain([
-            d3.min(data, function(d) { return d.leftMin; }),
-            d3.max(data, function(d) { return d.rightMax; })
+            d3.min(data, function(d) { return d.syntheticExtent[0]; }),
+            d3.max(data, function(d) { return d.syntheticExtent[1]; })
           ])
           .nice()
           .range([0, width]);
 
       var xLineScale = d3.scale.linear()
           .domain([
-            d3.min(data, function(d) { return d.leftMin; }),
-            d3.max(data, function(d) { return d.rightMax; })
+            d3.min(data, function(d) { return d.syntheticExtent[0]; }),
+            d3.max(data, function(d) { return d.syntheticExtent[1]; })
           ])
           .range([0, outlineCanvasSize]);
 
@@ -238,7 +238,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       var path = d3.svg.area()
           .interpolate("linear")
-          .x(function(d) { return xLineScale(d.x); })
+          .x(function(d) { return xLineScale(d.x + d.dx / 2); })
           .y0(function(d) { return yLineScale(0); })
           .y1(function(d) { return yLineScale(d.y); });
 
@@ -262,7 +262,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       var gTransition = svgTransition.select("g")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-      var bisect = d3.bisector(function(d) { return d.right; }).left;
+      var bisect = d3.bisector(function(d) { return d.x + d.dx; }).left;
       var stage = g.select(".stage")
           .on("mouseover", function() {
             hoverUpdate.transition().style("opacity", 1);
@@ -277,7 +277,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 v = xScale.invert(m[0]);
 
             function hoverXIndex(d) {
-              return Math.min(d.histogramData.length - 1, bisect(d.histogramData, v));
+              return Math.min(d.syntheticBins.length - 1, bisect(d.syntheticBins, v));
             }
 
             var lastSliceData;
@@ -286,17 +286,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 var index = hoverXIndex(d);
                 lastSliceData = d;
                 [].forEach.call(this.querySelectorAll("text"), function(n){
-                  n.textContent = format(d.histogramData[index].count);
+                  n.textContent = format(d.syntheticBins[index].y);
                 });
-                return "translate(" + xScale(d.histogramData[index].center) + "," + ySliceScale(d.histogramData[index].area) + ")";
+                return "translate(" + xScale(d.syntheticBins[index].x) + "," + ySliceScale(d.syntheticBins[index].y) + ")";
               });
 
             var index = hoverXIndex(lastSliceData);
 
             edgeLabelUpdate
-                .attr("transform", function(d) { return"translate(" + xScale(lastSliceData.histogramData[index][d]) + ", " + height + ")"; })
+                .attr("transform", function(d) { return"translate(" + xScale(lastSliceData.syntheticBins[index][d]) + ", " + height + ")"; })
               .select("text")
-                .text(function(d) { return format(lastSliceData.histogramData[index][d]); });
+                .text(function(d) { return format(lastSliceData.syntheticBins[index][d]); });
           });
 
       var background = stage.select(".background")
@@ -351,12 +351,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .style("display", "none")
           .attr("dx", 4);
 
-      var edgeLabel = g.select(".x-axis-hover").selectAll(".label").data(["left", "right"]),
+      var edgeLabel = g.select(".x-axis-hover").selectAll(".label").data(["x", "x"]),
           edgeLabelEnter = edgeLabel.enter().append("g").attr("class", "label"),
           edgeLabelUpdate = edgeLabel;
 
       edgeLabelEnter.append("rect")
-          .attr("x", function(d) { return (d === "left" ? -25 : 0);})
+          .attr("x", function(d) { return (d === "x" ? -25 : 0);})
           .attr("y", 6)
           .attr("width", 25)
           .attr("height", 14)

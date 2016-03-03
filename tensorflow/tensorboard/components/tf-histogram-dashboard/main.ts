@@ -390,17 +390,21 @@ module TF {
 
         dd.leftMin = d3.min(dd.histogramData, function(d:any) { return d.left; });
         dd.rightMax = d3.max(dd.histogramData, function(d:any) { return d.right; });
-        var binWidth = (dd.rightMax - dd.leftMin) / 50
+        var binWidth = (dd.rightMax - dd.leftMin) / 100
         dd.syntheticBins = d3.range(dd.leftMin, dd.rightMax, binWidth).map(function(left) {
           var right = left + binWidth;
-          var count = d3.sum(dd.histogramData.filter(function(d) { return d.left >= left && d.right < right; }), function(d:any) { return d.count; })
+          var count = d3.sum(dd.histogramData.map(function(d) {
+            var w = d.right - d.left;
+            var w2 = Math.min(d.right, right) - Math.max(d.left, left);
+            return (w2 > 0 ? (w2 / w) * d.count : 0);
+          }));
           return {
             x: left,
             dx: binWidth,
             y: count
           };
         });
-
+        dd.syntheticExtent = d3.extent(dd.syntheticBins.filter((d:any) => d.y > 0), (d:any) => d.x);
         dd.countExtent = d3.extent(dd.syntheticBins, function(d:any) { return d.y; });
 
       });
