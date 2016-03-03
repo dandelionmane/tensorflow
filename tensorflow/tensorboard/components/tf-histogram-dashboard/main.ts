@@ -162,16 +162,17 @@ module TF {
     // });
 
 
-    // actionsPanel.addEventListener("modechange", function(e) {
-    //   var v = e.detail.value === "overlay" ? JoyEnum.overlay : JoyEnum.offset;
-    //   joyStore.set(v);
-    // });
-    // joyStore.out(function(val) {
-    //   allCharts.forEach(function(chart) {
-    //     mutateChart(chart, "mode", val);
-    //   });
-    //   updateVisibleCharts();
-    // });
+    actionsPanel.addEventListener("modechange", function(e) {
+      var v = e.detail.value === "overlay" ? JoyEnum.overlay : JoyEnum.offset;
+      joyStore.set(v);
+    });
+    joyStore.out(function(val) {
+      allCharts.forEach(function(chart) {
+        mutateChart(chart, "mode", (val === 0 ? "offset" : "overlay"));
+      });
+      updateVisibleCharts();
+    });
+
     //
     // actionsPanel.addEventListener("timechange", function(e) {
     //   allCharts.forEach(function(chart) {
@@ -182,12 +183,14 @@ module TF {
     //   updateVisibleCharts();
     // });
     //
-    // throttle("searchchange", "throttledSearchchange", actionsPanel);
-    // actionsPanel.addEventListener("throttledSearchchange", function(e) {
-    //   filter(e.detail.value);
-    // });
+    
+    throttle("searchchange", "throttledSearchchange", actionsPanel);
+    actionsPanel.addEventListener("throttledSearchchange", function(e) {
+      filter(e.detail.value, categoryStore.value());
+    });
 
     function mutateChart(c, property, value) {
+      console.log(c, property, value)
       c[property] = value;
       c.dirty = true;
     }
@@ -205,26 +208,6 @@ module TF {
     }
 
 
-    //
-    // Render skeleton HTML
-    //
-
-    // backend.runs().then((x) => {
-    //   data = histogramCategories(x);
-    //   data.forEach(function(d: any) {
-    //     console.log(d)
-    //     d.runsByTag = d3.nest()
-    //         .key(function(d: any) { return d.tag; })
-    //         .entries(d.items);
-    //   });
-    //   filter("");
-    //   render();
-    //
-    //   // This adds the css scoping necessary for the new elements
-    //
-    // });
-
-
     function filter(query, data) {
       var queryExpression = new RegExp(query, "i");
       data.forEach(function(category) {
@@ -240,7 +223,7 @@ module TF {
         });
         category.match = (matchCount > 0);
       });
-      render(categoryStore.value());
+      render(data);
     }
 
     function layout(data) {
@@ -341,6 +324,10 @@ module TF {
           // .property("time", chartTime)
           // .property("mode", chartMode);
       var histogramUpdate = runUpdate.select("tf-vz-histogram-series");
+
+      histogramEnter.each(function() {
+        allCharts.push(this);
+      });
 
       histogramUpdate.each(function(d) {
         var chart = this;
