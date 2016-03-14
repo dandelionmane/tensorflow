@@ -209,15 +209,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           .range([0, width]);
 
       var xLineScale = d3.scale.linear()
-          .domain([
-            d3.min(data, function(d) { return d.syntheticExtent[0]; }),
-            d3.max(data, function(d) { return d.syntheticExtent[1]; })
-          ])
+          .domain(xScale.domain())
           .range([0, outlineCanvasSize]);
 
       var outlineColor = d3.scale.linear()
           .domain(d3.extent(data, function(d) { return d[time]; }))
-          .range(["orange", "darkred"])
+          .range(["#FFA726", "#BF360C"])
           .interpolate(d3.interpolateHcl);
 
       var xAxis = d3.svg.axis()

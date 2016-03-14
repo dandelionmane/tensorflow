@@ -113,7 +113,9 @@ module TF {
     function categorizeHistograms(hists: HistogramChart[]): Categories<Category<HistogramChart>> {
       return d3.nest()
           .key(function(d: HistogramChart) { return d.tag.split("/")[0]}) // should bbe computeCategory
+          .sortKeys((a, b) => a.localeCompare(b))
           .key(function(d: HistogramChart) { return d.tag; })
+          .sortKeys((a, b) => a.localeCompare(b))
           .entries(hists);
     }
     var categoryStore: Nanite.Store<Categories<Category<HistogramChart>>> = chartStore.map(categorizeHistograms);
@@ -381,15 +383,14 @@ module TF {
           } else {
             bin.right = value;
           }
-          bin.center = (bin.left + bin.right) / 2;
           bin.count = dd.bucketCounts[i];
-          bin.area =  bin.count / (bin.right - bin.left);
           prev = ddd;
           return bin;
         });
 
         dd.leftMin = d3.min(dd.histogramData, function(d:any) { return d.left; });
         dd.rightMax = d3.max(dd.histogramData, function(d:any) { return d.right; });
+
         var binWidth = (dd.rightMax - dd.leftMin) / 100
         dd.syntheticBins = d3.range(dd.leftMin, dd.rightMax, binWidth).map(function(left) {
           var right = left + binWidth;
