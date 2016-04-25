@@ -9,8 +9,7 @@ It has the following settable properties:
   selectedRuns: (required, string[]) - the runs the chart should display
   xType: (required, string) - the way to display x values - allows "step" or "wall_time"
   dataCoordinator: (required, TF.DataCoordinator) - the data coordinator for talking to backend
-  colorScale: (required, Plottable.Scales.Color) - maps from runs to colors
-  tooltipUpdater: (required, function) - allows the chart to modify tooltips
+  colorScale: (required, Plottable.Scales.Color) - maps from runs to colors: (required, function) - allows the chart to modify tooltips
 
 It exposes the following methods:
   redraw() - cause the chart to re-render (useful if e.g. container size changed)
@@ -39,6 +38,10 @@ The wall_time is serialized as seconds since epoch.
       .plottable .crosshairs line.guide-line {
         stroke: #777;
       }
+      text.tooltip {
+        font-size: 3;
+
+      }
     </style>
   </template>
   <script src="dragZoomInteraction.js"></script>
@@ -54,11 +57,10 @@ The wall_time is serialized as seconds since epoch.
         selectedRuns: Array,
         xType: String,
         dataProvider: Function,
-        tooltipUpdater: Function,
         _initialized: Boolean,
       },
       observers: [
-        "_makeChart(type, tag, dataProvider, tooltipUpdater, xType, colorScale, _initialized)",
+        "_makeChart(type, tag, dataProvider, xType, colorScale, _initialized)",
         "_changeRuns(_chart, selectedRuns.*)"
       ],
       _changeRuns: function(chart) {
@@ -83,13 +85,13 @@ The wall_time is serialized as seconds since epoch.
           throw new Error("Unrecognized chart type");
         }
       },
-      _makeChart: function(type, tag, dataProvider, tooltipUpdater, xType, colorScale, _initialized) {
+      _makeChart: function(type, tag, dataProvider, xType, colorScale, _initialized) {
         if (!_initialized) {
           return;
         }
         if (this._chart) this._chart.destroy();
         var cns = this._constructor(type);
-        var chart = new cns(tag, dataProvider, tooltipUpdater, xType, colorScale);
+        var chart = new cns(tag, dataProvider, xType, colorScale);
         var svg = d3.select(this.$.chartsvg);
         this.async(function() {
           chart.renderTo(svg);

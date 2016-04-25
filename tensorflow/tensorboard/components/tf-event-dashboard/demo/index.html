@@ -11,17 +11,25 @@
       <template>
         <tf-event-dashboard
           id="demo"
-          router="[[demoRouter]]">
+          router="[[router]]"
+          backend="[[backend]]"
+        >
         </tf-event-dashboard>
       </template>
       <script>
+      var router = TF.Backend.router("/demo/data", true);
+      var backend = new TF.Backend.Backend(router);
         Polymer({
           is: "x-demo",
           properties: {
-            demoRouter: {
+            router: {
               type: Object,
-              value: TF.Urls.demoRouter("data"),
+              value: router,
             },
+            backend: {
+              type: Object,
+              value: backend,
+            }
           },
         });
       </script>

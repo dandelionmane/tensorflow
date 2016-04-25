@@ -13,18 +13,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 module TF {
-  type tooltipMap = {[run: string]: string};
   export type DataFn = (run: string, tag: string) => Promise<Array<Backend.Datum>>;
-  export type TooltipUpdater = (tooltipMap, xValue, closestRun) => void;
 
   let Y_TOOLTIP_FORMATTER_PRECISION = 4;
   let STEP_AXIS_FORMATTER_PRECISION = 4;
   let Y_AXIS_FORMATTER_PRECISION = 3;
 
+  interface Point {
+    run: string;
+    x: number | Date;
+    y: number;
+    xStr: string;
+    yStr: string;
+  }
+
+  type CrosshairResult = {[runName: string]: Point};
+
   export class BaseChart {
     protected dataFn: DataFn;
     protected tag: string;
-    protected tooltipUpdater: TooltipUpdater;
     private datasets: {[run: string]: Plottable.Dataset};
     protected runs: string[];
 
@@ -43,7 +50,6 @@ module TF {
     constructor(
         tag: string,
         dataFn: DataFn,
-        tooltipUpdater: TooltipUpdater,
         xType: string,
         colorScale: Plottable.Scales.Color
       ) {
@@ -51,7 +57,6 @@ module TF {
       this.datasets = {};
       this.tag = tag;
       this.colorScale = colorScale;
-      this.tooltipUpdater = tooltipUpdater;
       this.buildChart(xType);
     }
 
@@ -85,76 +90,6 @@ module TF {
       return this.datasets[run];
     }
 
-    protected addCrosshairs(plot: Plottable.XYPlot<number | Date, number>, yAccessor): Plottable.Components.Group {
-      var pi = new Plottable.Interactions.Pointer();
-      pi.attachTo(plot);
-      let xGuideLine = new Plottable.Components.GuideLineLayer<void>("vertical");
-      let yGuideLine = new Plottable.Components.GuideLineLayer<void>("horizontal");
-      xGuideLine.addClass("crosshairs");
-      yGuideLine.addClass("crosshairs");
-      var group = new Plottable.Components.Group([plot, xGuideLine, yGuideLine]);
-      let yfmt = multiscaleFormatter(Y_TOOLTIP_FORMATTER_PRECISION);
-
-      pi.onPointerMove((p: Plottable.Point) => {
-        let run2val: {[run: string]: string} = {};
-        let x: number = this.xScale.invert(p.x).valueOf();
-        let yMin: number = this.yScale.domain()[0];
-        let yMax: number = this.yScale.domain()[1];
-        let closestRun: string = null;
-        let minYDistToRun: number = Infinity;
-        let yValueForCrosshairs: number = p.y;
-        plot.datasets().forEach((dataset) => {
-          let run: string = dataset.metadata().run;
-          let data: Backend.Datum[] = dataset.data();
-          let xs: number[] = data.map((d, i) => this.xAccessor(d, i, dataset).valueOf());
-          let idx: number = _.sortedIndex(xs, x);
-          if (idx === 0 || idx === data.length) {
-            // Only find a point when the cursor is inside the range of the data
-            // if the cursor is to the left or right of all the data, don't
-            // attach.
-            return;
-          }
-          let previous = data[idx - 1];
-          let next = data[idx];
-          let x0: number = this.xAccessor(previous, idx - 1, dataset).valueOf();
-          let x1: number = this.xAccessor(next, idx, dataset).valueOf();
-          let y0: number = yAccessor(previous, idx - 1, dataset).valueOf();
-          let y1: number = yAccessor(next, idx, dataset).valueOf();
-          let slope: number = (y1 - y0) / (x1 - x0);
-          let y: number = y0 + slope * (x - x0);
-
-          if (y < yMin || y > yMax || y !== y) {
-            // don't find data that is off the top or bottom of the plot.
-            // also don't find data if it is NaN
-            return;
-          }
-          let dist = Math.abs(this.yScale.scale(y) - p.y);
-          if (dist < minYDistToRun) {
-            minYDistToRun = dist;
-            closestRun = run;
-            yValueForCrosshairs = this.yScale.scale(y);
-          }
-          // Note this tooltip will display linearly interpolated values
-          // e.g. will display a y=0 value halfway between [y=-1, y=1], even
-          // though there is not actually any 0 datapoint. This could be misleading
-          run2val[run] = yfmt(y);
-        });
-        xGuideLine.pixelPosition(p.x);
-        yGuideLine.pixelPosition(yValueForCrosshairs);
-        this.tooltipUpdater(run2val, this.xTooltipFormatter(x), closestRun);
-
-      });
-
-      pi.onPointerExit(() => {
-        this.tooltipUpdater(null, null, null);
-        xGuideLine.pixelPosition(-1);
-        yGuideLine.pixelPosition(-1);
-      });
-
-      return group;
-
-    }
-
     protected buildChart(xType: string) {
       if (this.outer) {
         this.outer.destroy();
@@ -177,7 +112,7 @@ module TF {
 
       var dzl = new Plottable.DragZoomLayer(this.xScale, this.yScale);
 
-      this.center = new Plottable.Components.Group([center, this.gridlines, dzl]);
+      this.center = new Plottable.Components.Group([this.gridlines, center, dzl]);
       this.outer =  new Plottable.Components.Table([
                                                    [this.yAxis, this.center],
                                                    [null, this.xAxis]
@@ -214,6 +149,120 @@ module TF {
       this.plot = plot;
       var group = this.addCrosshairs(plot, yAccessor);
       return group;
+    }
+
+    protected addCrosshairs(plot: Plottable.XYPlot<number | Date, number>, yAccessor): Plottable.Components.Group {
+      var pi = new Plottable.Interactions.Pointer();
+      pi.attachTo(plot);
+      let pointsComponent = new Plottable.Component();
+      let tooltipTextComponent = new Plottable.Component();
+      let tooltipBackgroundComponent = new Plottable.Component();
+      var group = new Plottable.Components.Group([plot, pointsComponent, tooltipBackgroundComponent, tooltipTextComponent]);
+      let yfmt = multiscaleFormatter(Y_TOOLTIP_FORMATTER_PRECISION);
+
+      pi.onPointerMove((p: Plottable.Point) => {
+        let run2p: {[run: string]: Point} = {};
+        let px = this.xScale.invert(p.x);
+        let py = this.yScale.invert(p.y);
+        let pointer: Point = {
+          run: null,
+          x: px,
+          y: py,
+          xStr: this.xTooltipFormatter(px.valueOf()),
+          yStr: yfmt(py.valueOf()),
+        };
+
+        plot.datasets().forEach((dataset) => {
+          let run: string = dataset.metadata().run;
+          let points: Point[] = dataset.data().map((d, i) => {
+            let x = this.xAccessor(d, i, dataset);
+            let y = yAccessor(d, i, dataset);
+            return {
+              x: x,
+              y: y,
+              xStr: this.xTooltipFormatter(x.valueOf()),
+              yStr: yfmt(y.valueOf()),
+              run: run,
+            };
+          });
+          let idx: number = _.sortedIndex(points, pointer, (p: Point) => p.x.valueOf());
+          let p: Point;
+          if (idx === points.length) {
+            p = points[points.length - 1];
+          } else if (idx === 0) {
+            p = points[0];
+          } else {
+            let prev = points[idx-1];
+            let next = points[idx];
+            let pDist = Math.abs(prev.x.valueOf() - pointer.x.valueOf());
+            let nDist = Math.abs(next.x.valueOf() - pointer.x.valueOf());
+            p = pDist < nDist ? prev : next;
+          }
+          run2p[run] = p;
+        });
+
+        let points: Point[] = <Point[]> _.values(run2p);
+        let pts: any = pointsComponent.content().selectAll(".point").data(points, (p: Point) => p.run);
+        pts.enter().append("circle").attr("r", 3).classed("point", true)
+        pts
+            .attr("cx", (p) => this.xScale.scale(p.x))
+            .attr("cy", (p) => this.yScale.scale(p.y))
+            .attr("fill", (p) => this.colorScale.scale(p.run));
+        pts.exit().remove();
+
+        var closestByEuclDistance: Point = _.min(points, (p: Point) => {
+          var xDist = p.x.valueOf() - pointer.x.valueOf();
+          var yDist = p.y.valueOf() - pointer.y.valueOf();
+          return xDist * xDist + yDist * yDist;
+        });
+
+        let t: any = tooltipTextComponent.content().selectAll(".tooltip").data([closestByEuclDistance], (p: Point) => p.run);
+        let TOOLTIP_MARGIN = 10; // offset for tooltip from point
+        t.enter().append("text").classed("tooltip", true).attr("font-size", 10)
+        t.attr("x", (p) => this.xScale.scale(p.x) + TOOLTIP_MARGIN)
+         .attr("y", (p) => this.yScale.scale(p.y) - TOOLTIP_MARGIN)
+         .text((p) => `( ${p.xStr} , ${p.yStr} )`);
+        t.exit().remove();
+
+        let BOX_MARGIN = 3; // padding on each side for the background box
+        let text_bb = t.node().getBBox();
+        let containerWidth = tooltipTextComponent.width();
+        let containerHeight = tooltipTextComponent.height();
+
+        if (text_bb.x + text_bb.width + BOX_MARGIN > containerWidth) {
+          // The box would be off the right edge. Instead, let's push it
+          // to the left of the data point
+          text_bb.x -= text_bb.width + BOX_MARGIN + 2*TOOLTIP_MARGIN;
+          text_bb.x = Math.max(text_bb.x, 0);
+        }
+        if (text_bb.y + text_bb.height + BOX_MARGIN < 0) {
+          text_bb.y += text_bb.height + BOX_MARGIN + 2*TOOLTIP_MARGIN;
+          text_bb.y = Math.min(text_bb.y, containerHeight);
+        }
+
+        t.attr("x", text_bb.x).attr("y", text_bb.y);
+        let background_bb = t.node().getBBox();
+        background_bb.x -= BOX_MARGIN;
+        background_bb.width += 2 * BOX_MARGIN;
+        background_bb.y -= BOX_MARGIN;
+        background_bb.height += 2 * BOX_MARGIN;
+
+        let bg: any = tooltipBackgroundComponent.content().selectAll("rect").data([null]);
+        bg.enter().append("rect").classed("background-rect", true)
+        bg.attr(background_bb)
+          .attr("stroke", this.colorScale.scale(closestByEuclDistance.run))
+          .attr("fill", "white");
+
+      });
+
+      pi.onPointerExit(() => {
+        pointsComponent.content().selectAll(".point").remove();
+        tooltipTextComponent.content().selectAll(".tooltip").remove();
+        tooltipBackgroundComponent.content().selectAll("rect").remove();
+      });
+
+      return group;
+
     }
 
     public changeRuns(runs: string[]) {
@@ -267,8 +316,7 @@ module TF {
       medianPlot.attr("stroke", (d: any, i: number, m: any) => m.run, this.colorScale);
 
       this.plots = plots;
-      var group = this.addCrosshairs(medianPlot, medianAccessor);
-      return new Plottable.Components.Group([new Plottable.Components.Group(plots), group]);
+      return new Plottable.Components.Group(plots);
     }
   }
 
