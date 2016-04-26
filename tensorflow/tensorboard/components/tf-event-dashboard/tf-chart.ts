@@ -160,7 +160,41 @@ module TF {
       var group = new Plottable.Components.Group([plot, pointsComponent, tooltipBackgroundComponent, tooltipTextComponent]);
       let yfmt = multiscaleFormatter(Y_TOOLTIP_FORMATTER_PRECISION);
 
+      var tooltip = d3.select("body").append("div")
+          .style("position", "absolute")
+          .style("display", "none")
+          .style("box-shadow", "0 1px 4px rgba(0, 0, 0, 0.3)")
+          .style("font-size", "11px")
+          .style("background", "rgba(0, 0, 0, 0.6)")
+          .style("color", "white")
+          .style("border-radius", "2px")
+          .style("padding", "8px")
+          .style("top", "200px")
+          .style("line-height", "1.4em")
+          .style("left", "300px")
+          .style("transition", "top 0.2s, left 0.2s");
+
+      var tooltipHeadline = tooltip.append("h4")
+          .style("margin", "0 0 2px 0")
+          .style("font-weight", "normal");
+
+      var xLabel = tooltip.append("div").attr("class", "tooltip-run");
+      xLabel.append("span")
+          .text("Step")
+          .style("display", "inline-block")
+          .style("opacity", 0.5)
+          .style("width", "40px");
+      var xLabelValue = xLabel.append("span");
+      var yLabel = tooltip.append("div").attr("class", "tooltip-run");
+      yLabel.append("span")
+          .text("Value")
+          .style("display", "inline-block")
+          .style("opacity", 0.5)
+          .style("width", "40px");
+      var yLabelValue = yLabel.append("span");
+
       pi.onPointerMove((p: Plottable.Point) => {
+
         let run2p: {[run: string]: Point} = {};
         let px = this.xScale.invert(p.x);
         let py = this.yScale.invert(p.y);
@@ -202,13 +236,6 @@ module TF {
         });
 
         let points: Point[] = <Point[]> _.values(run2p);
-        let pts: any = pointsComponent.content().selectAll(".point").data(points, (p: Point) => p.run);
-        pts.enter().append("circle").attr("r", 3).classed("point", true)
-        pts
-            .attr("cx", (p) => this.xScale.scale(p.x))
-            .attr("cy", (p) => this.yScale.scale(p.y))
-            .attr("fill", (p) => this.colorScale.scale(p.run));
-        pts.exit().remove();
 
         var closestByEuclDistance: Point = _.min(points, (p: Point) => {
           var xDist = p.x.valueOf() - pointer.x.valueOf();
@@ -216,49 +243,29 @@ module TF {
           return xDist * xDist + yDist * yDist;
         });
 
-        let t: any = tooltipTextComponent.content().selectAll(".tooltip").data([closestByEuclDistance], (p: Point) => p.run);
-        let TOOLTIP_MARGIN = 10; // offset for tooltip from point
-        t.enter().append("text").classed("tooltip", true).attr("font-size", 10)
-        t.attr("x", (p) => this.xScale.scale(p.x) + TOOLTIP_MARGIN)
-         .attr("y", (p) => this.yScale.scale(p.y) - TOOLTIP_MARGIN)
-         .text((p) => `( ${p.xStr} , ${p.yStr} )`);
-        t.exit().remove();
+        let pts: any = pointsComponent.content().selectAll(".point").data(points, (p: Point) => p.run);
+        pts.enter().append("circle").classed("point", true)
+        pts
+            .attr("r", (p) => p.run === closestByEuclDistance.run ? 5 : 3)
+            .attr("cx", (p) => this.xScale.scale(p.x))
+            .attr("cy", (p) => this.yScale.scale(p.y))
+            .style("stroke", "none")
+            .attr("fill", (p) => this.colorScale.scale(p.run));
+        pts.exit().remove();
 
-        let BOX_MARGIN = 3; // padding on each side for the background box
-        let text_bb = t.node().getBBox();
-        let containerWidth = tooltipTextComponent.width();
-        let containerHeight = tooltipTextComponent.height();
+        tooltip
+            .style("display", "block")
+            .style("left", (p) => this.xScale.scale(closestByEuclDistance.x) + "px")
+            .style("top", (p) => this.yScale.scale(closestByEuclDistance.y) + "px");
 
-        if (text_bb.x + text_bb.width + BOX_MARGIN > containerWidth) {
-          // The box would be off the right edge. Instead, let's push it
-          // to the left of the data point
-          text_bb.x -= text_bb.width + BOX_MARGIN + 2*TOOLTIP_MARGIN;
-          text_bb.x = Math.max(text_bb.x, 0);
-        }
-        if (text_bb.y + text_bb.height + BOX_MARGIN < 0) {
-          text_bb.y += text_bb.height + BOX_MARGIN + 2*TOOLTIP_MARGIN;
-          text_bb.y = Math.min(text_bb.y, containerHeight);
-        }
-
-        t.attr("x", text_bb.x).attr("y", text_bb.y);
-        let background_bb = t.node().getBBox();
-        background_bb.x -= BOX_MARGIN;
-        background_bb.width += 2 * BOX_MARGIN;
-        background_bb.y -= BOX_MARGIN;
-        background_bb.height += 2 * BOX_MARGIN;
-
-        let bg: any = tooltipBackgroundComponent.content().selectAll("rect").data([null]);
-        bg.enter().append("rect").classed("background-rect", true)
-        bg.attr(background_bb)
-          .attr("stroke", this.colorScale.scale(closestByEuclDistance.run))
-          .attr("fill", "white");
+        xLabelValue.text(closestByEuclDistance.xStr);
+        yLabelValue.text(closestByEuclDistance.yStr);
+        tooltipHeadline.text(closestByEuclDistance.run);
 
       });
 
       pi.onPointerExit(() => {
-        pointsComponent.content().selectAll(".point").remove();
-        tooltipTextComponent.content().selectAll(".tooltip").remove();
-        tooltipBackgroundComponent.content().selectAll("rect").remove();
+        tooltip.style("display", "none");
       });
 
       return group;
