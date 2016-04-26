@@ -47,6 +47,7 @@ module TF {
     protected outer: Plottable.Components.Table;
     protected colorScale: Plottable.Scales.Color;
     protected xTooltipFormatter: (d: number) => string;
+    protected tooltip: d3.Selection<any>;
     constructor(
         tag: string,
         dataFn: DataFn,
@@ -125,6 +126,9 @@ module TF {
 
     public renderTo(target: d3.Selection<any>) {
       this.outer.renderTo(target);
+      // var el = <HTMLElement>target.node();
+      // var tt = <HTMLElement>this.tooltip.node();
+      // el.parentNode.appendChild(tt);
     }
 
     public redraw() {
@@ -138,6 +142,7 @@ module TF {
 
   export class LineChart extends BaseChart {
     private plot: Plottable.Plots.Line<number | Date>;
+
     protected buildPlot(xAccessor, xScale, yScale): Plottable.Component {
       var yAccessor = (d: Backend.ScalarDatum) => d.scalar;
       var plot = new Plottable.Plots.Line<number | Date>();
@@ -147,6 +152,7 @@ module TF {
         (d: Backend.Datum, i: number, dataset: Plottable.Dataset) => dataset.metadata().run,
         this.colorScale);
       this.plot = plot;
+      this.tooltip = d3.select("body").append("div");
       var group = this.addCrosshairs(plot, yAccessor);
       return group;
     }
@@ -160,36 +166,37 @@ module TF {
       var group = new Plottable.Components.Group([plot, pointsComponent, tooltipBackgroundComponent, tooltipTextComponent]);
       let yfmt = multiscaleFormatter(Y_TOOLTIP_FORMATTER_PRECISION);
 
-      var tooltip = d3.select("body").append("div")
+      this.tooltip
+          .attr("class", "tooltip")
           .style("position", "absolute")
           .style("display", "none")
           .style("box-shadow", "0 1px 4px rgba(0, 0, 0, 0.3)")
           .style("font-size", "11px")
-          .style("background", "rgba(0, 0, 0, 0.6)")
+          .style("background", "rgba(0, 0, 0, 0.8)")
           .style("color", "white")
           .style("border-radius", "2px")
           .style("padding", "8px")
           .style("top", "200px")
           .style("line-height", "1.4em")
-          .style("left", "300px")
-          .style("transition", "top 0.2s, left 0.2s");
+          .style("left", "300px");
+          // .style("transition", "top 0.2s, left 0.2s");
 
-      var tooltipHeadline = tooltip.append("h4")
+      var tooltipHeadline = this.tooltip.append("h4")
           .style("margin", "0 0 2px 0")
           .style("font-weight", "normal");
 
-      var xLabel = tooltip.append("div").attr("class", "tooltip-run");
+      var xLabel = this.tooltip.append("div").attr("class", "tooltip-run");
       xLabel.append("span")
           .text("Step")
           .style("display", "inline-block")
-          .style("opacity", 0.5)
+          .style("opacity", 0.7)
           .style("width", "40px");
       var xLabelValue = xLabel.append("span");
-      var yLabel = tooltip.append("div").attr("class", "tooltip-run");
+      var yLabel = this.tooltip.append("div").attr("class", "tooltip-run");
       yLabel.append("span")
           .text("Value")
           .style("display", "inline-block")
-          .style("opacity", 0.5)
+          .style("opacity", 0.7)
           .style("width", "40px");
       var yLabelValue = yLabel.append("span");
 
@@ -253,10 +260,14 @@ module TF {
             .attr("fill", (p) => this.colorScale.scale(p.run));
         pts.exit().remove();
 
-        tooltip
+        var plotElement = <HTMLElement>plot.content().node();
+        var plotBBox = plotElement.getBoundingClientRect();
+        var tooltipElement = <HTMLElement>this.tooltip.node();
+        var tooltipBBox = tooltipElement.getBoundingClientRect();
+        this.tooltip
             .style("display", "block")
-            .style("left", (p) => this.xScale.scale(closestByEuclDistance.x) + "px")
-            .style("top", (p) => this.yScale.scale(closestByEuclDistance.y) + "px");
+            .style("left", (p) => this.xScale.scale(closestByEuclDistance.x) + plotBBox.left - tooltipBBox.width - 30 + "px")
+            .style("top", (p) => this.yScale.scale(closestByEuclDistance.y) + plotBBox.top - tooltipBBox.height - 30 + "px");
 
         xLabelValue.text(closestByEuclDistance.xStr);
         yLabelValue.text(closestByEuclDistance.yStr);
@@ -265,7 +276,8 @@ module TF {
       });
 
       pi.onPointerExit(() => {
-        tooltip.style("display", "none");
+        this.tooltip.style("display", "none");
+        pointsComponent.content().selectAll(".point").remove();
       });
 
       return group;
