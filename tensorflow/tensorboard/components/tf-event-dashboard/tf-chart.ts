@@ -169,7 +169,8 @@ module TF {
       this.tooltip
           .attr("class", "tooltip")
           .style("position", "absolute")
-          .style("display", "none")
+          .style("pointer-events", "none")
+          .style("opacity", 0)
           .style("box-shadow", "0 1px 4px rgba(0, 0, 0, 0.3)")
           .style("font-size", "11px")
           .style("background", "rgba(0, 0, 0, 0.8)")
@@ -265,9 +266,11 @@ module TF {
         var tooltipElement = <HTMLElement>this.tooltip.node();
         var tooltipBBox = tooltipElement.getBoundingClientRect();
         this.tooltip
-            .style("display", "block")
+            // .style("display", "block")
             .style("left", (p) => this.xScale.scale(closestByEuclDistance.x) + plotBBox.left - tooltipBBox.width - 30 + "px")
-            .style("top", (p) => this.yScale.scale(closestByEuclDistance.y) + plotBBox.top - tooltipBBox.height - 30 + "px");
+            .style("top", (p) => this.yScale.scale(closestByEuclDistance.y) + plotBBox.top - tooltipBBox.height - 30 + "px")
+          .transition().duration(100)
+            .style("opacity", 1);
 
         xLabelValue.text(closestByEuclDistance.xStr);
         yLabelValue.text(closestByEuclDistance.yStr);
@@ -276,7 +279,7 @@ module TF {
       });
 
       pi.onPointerExit(() => {
-        this.tooltip.style("display", "none");
+        this.tooltip.transition().duration(300).style("opacity", 0);
         pointsComponent.content().selectAll(".point").remove();
       });
 
